@@ -67,7 +67,7 @@ h2{font-size:15px;margin:0 0 10px}
   <div id="err" class="err"></div>
   <div id="drop">Drop a .sor or Advantest .all file anywhere on this page</div>
   <div id="v3" hidden>
-    <div class="bar" style="margin-top:10px"><label>Min step <input id="stp" type="number" value="4" min="1" max="30" step="0.5" style="width:64px"> dB</label><label>Min spacing <input id="spc" type="number" value="15" min="1" max="300" style="width:64px"> km</label><label>Green ≤ <input id="gl" type="number" value="1" min="0" max="30" step="0.5" style="width:56px"> dB, red ≥ <input id="rl" type="number" value="10" min="1" max="60" style="width:56px"> dB</label><label>Data <select id="dt"><option value="full">Entire trace</option><option value="pk">Repeater peaks only</option></select></label><label>Show <select id="md"><option value="abs">Peak level</option><option value="diff">Difference vs lowest wavelength</option></select></label><label><input id="nrm" type="checkbox" checked> Remove each trace’s mean</label><button id="r3">Reset view</button></div>
+    <div class="bar" style="margin-top:10px"><label>Min step <input id="stp" type="number" value="4" min="1" max="30" step="0.5" style="width:64px"> dB</label><label>Min spacing <input id="spc" type="number" value="15" min="1" max="300" style="width:64px"> km</label><label>Green ≤ <input id="gl" type="number" value="1" min="0" max="30" step="0.5" style="width:56px"> dB, red ≥ <input id="rl" type="number" value="10" min="1" max="60" style="width:56px"> dB</label><label>Data <select id="dt"><option value="full">Entire trace</option><option value="pk">Repeater peaks only</option></select></label><label>Show <select id="md"><option value="abs">Peak level</option><option value="diff">Difference vs baseline</option></select></label><label>Baseline <select id="bs"></select></label><label><input id="nrm" type="checkbox" checked> Remove each trace’s mean</label><button id="r3">Reset view</button></div>
     <div id="i3" class="sub" style="margin:8px 0 0"></div>
     <div style="height:480px;margin-top:4px"><canvas id="c3" style="cursor:grab;touch-action:none"></canvas></div>
     <div class="sub" style="margin:6px 0 0">Height of each repeater’s return peak, per wavelength. Drag to rotate, scroll to zoom.</div>
@@ -375,18 +375,19 @@ function surf(){
   const full=$('#dt').value==='full',ref=ts.reduce((a,b)=>EI.get(b)*b.dx>EI.get(a)*a.dx?b:a),km0=full?gridKm(ts,EI):repeaters(ref,st,sp,EI.get(ref));
   let Z=ts.map(R=>km0.map(k=>full?binAt(R,k,km0.bw):k<=EI.get(R)*R.dx?peakAt(R,k,1.5,st):NaN));
   const ok=km0.map((k,r)=>Z.filter(z=>isFinite(z[r])).length>=Math.min(2,ts.length)),km=km0.filter((k,r)=>ok[r]);Z=Z.map(z=>z.filter((v,r)=>ok[r]));
-  const spread=km.map((k,r)=>{const f=Z.map(z=>z[r]).filter(isFinite);return Math.max(...f)-Math.min(...f)});   // spread of absolute levels across traces at each distance (drives the colour)
+  const bi=Math.max(0,ts.indexOf(T[+$('#bs').value]));   // baseline trace chosen by the user
+  const spread=km.map((k,r)=>{const b=Z[bi][r],f=Z.map(z=>z[r]).filter(isFinite);return isFinite(b)?Math.max(...f.map(v=>Math.abs(v-b))):Math.max(...f)-Math.min(...f)});   // largest difference from the baseline at each distance (drives the colour)
   if(nrm)Z=Z.map(z=>{const f=z.filter(isFinite),m=f.reduce((s,v)=>s+v,0)/(f.length||1);return z.map(v=>v-m)});
-  const diff=$('#md').value==='diff';if(diff)Z=Z.map(z=>z.map((v,r)=>v-Z[0][r]));
+  const diff=$('#md').value==='diff';if(diff)Z=Z.map(z=>z.map((v,r)=>v-Z[bi][r]));
 
   const uniq=new Set(ts.map(R=>R.fx.wl)).size===ts.length;
-  return{ts,km,Z,diff,full,spr:spread,ya:ts.map((R,i)=>uniq?R.fx.wl:i),yl:ts.map((R,i)=>uniq?R.fx.wl.toFixed(2)+' nm':'#'+(i+1))};
+  return{ts,km,Z,diff,full,bi,spr:spread,ya:ts.map((R,i)=>uniq?R.fx.wl:i),yl:ts.map((R,i)=>uniq?R.fx.wl.toFixed(2)+' nm':'#'+(i+1))};
 }
 function refresh3d(){
   if(T.length<2){S3=null;return}
-  S3=surf();const dz=S3.diff?S3.Z[S3.Z.length-1].filter(isFinite):[],dm=dz.reduce((s,v)=>s+v,0)/(dz.length||1);
+  S3=surf();const bt=S3.diff?S3.Z.map((z,t)=>{const f=z.filter(isFinite);return t===S3.bi||!f.length?null:S3.yl[t]+' − '+S3.yl[S3.bi]+': mean '+(f.reduce((s,v)=>s+v,0)/f.length).toFixed(1)+' dB ('+Math.min(...f).toFixed(1)+' to '+Math.max(...f).toFixed(1)+')'}).filter(Boolean):[];
   $('#i3').textContent=S3.km.length+(S3.full?' bins, entire trace':' repeaters')+' \u00b7 '+S3.ts.map(R=>R.fx.wl?R.fx.wl+' nm ('+(299792.458/R.fx.wl).toFixed(2)+' THz)':R.name).join(' \u00b7 ');
-  if(S3.diff&&dz.length)$('#i3').textContent+=' · Δ '+S3.yl[S3.yl.length-1]+' − '+S3.yl[0]+': mean '+dm.toFixed(1)+' dB, range '+Math.min(...dz).toFixed(1)+' to '+Math.max(...dz).toFixed(1)+' dB';
+  if(bt.length)$('#i3').textContent+=' · Δ '+bt.join(' · ');
   draw3d();
 }
 function draw3d(){
@@ -394,7 +395,7 @@ function draw3d(){
   c.width=b.width*dpr;c.height=b.height*dpr;
   const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.font='11px system-ui,sans-serif';
   const cs=getComputedStyle(document.documentElement),col=n=>cs.getPropertyValue(n).trim();
-  const {ts,km,Z,ya,yl,spr}=S3||{km:[],ts:[]};
+  const {ts,km,Z,ya,yl,spr,bi}=S3||{km:[],ts:[]};
   if(km.length<2||ts.length<2){g.fillStyle=col('--muted');g.fillText('Load at least 2 traces; if no repeaters are found, lower the minimum step.',16,28);return}
   const fin=Z.flat().filter(isFinite),mab=Math.max(...fin.map(Math.abs))||1,zmin=S3.diff?-mab:Math.min(...fin),zmax=S3.diff?mab:Math.max(...fin),zs=zmax-zmin||1;
   const x0=km[0],x1=km[km.length-1],y0=ya[0],y1=ya[ya.length-1],XS=1.5,YS=.8,ZS=.6;
@@ -425,7 +426,7 @@ function draw3d(){
   for(let i=0;i<=4;i++){const v=zmin+zs*i/4,p=P(zc[0],zc[1],nz(v));g.fillText(v.toFixed(1),p[0]-6,p[1]+4)}
   const bx=16,by=14,bw=120;for(let i=0;i<bw;i++){g.fillStyle=cm(i/bw);g.fillRect(bx+i,by,1,8)}
   g.fillStyle=col('--muted');g.textAlign='left';g.fillText('≤'+gl+' dB',bx,by+22);g.textAlign='right';g.fillText('≥'+rl+' dB',bx+bw,by+22);
-  g.textAlign='left';g.fillText('Colour = difference between traces',bx+bw+10,by+9);g.fillText('Height = '+(S3.diff?'difference vs '+yl[0]:$('#nrm').checked?'level vs trace mean':'level (absolute)')+' (dB)',bx,by+38);
+  g.textAlign='left';g.fillText('Colour = difference from baseline ('+yl[bi]+')',bx+bw+10,by+9);g.fillText('Height = '+(S3.diff?'difference vs '+yl[bi]:$('#nrm').checked?'level vs trace mean':'level (absolute)')+' (dB)',bx,by+38);
 }
 function setMode(m){
   mode=m;$('#view').hidden=m!=='2d'||!D;$('#detail').hidden=m!=='2d'||!D;$('#v3').hidden=m!=='3d';$('#z2').hidden=m!=='2d';
@@ -441,12 +442,13 @@ async function loadFiles(files,add){
   $('#sel').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+R.name.replace(/[<&"]/g,'')+(R.fx.wl?' ('+R.fx.wl+' nm)':'')+'</option>').join('');
   $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;$('#t2').hidden=$('#t3').hidden=T.length<2;
   const last=T[T.length-1];$('#sel').value=T.length-1;show(last,last.name);
+  const lo=T.reduce((a,R,i)=>R.fx.wl<T[a].fx.wl?i:a,0);$('#bs').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+(R.fx.wl?R.fx.wl+' nm – ':'')+R.name.replace(/[<&"]/g,'')+'</option>').join('');$('#bs').value=lo;
   $('#md').value=T.length===2?'diff':'abs';$('#nrm').checked=T.length!==2;
   if(T.length<2)mode='2d';setMode(mode);
 }
 $('#sel').onchange=e=>{const R=T[+e.target.value];show(R,R.name);setMode(mode)};
 $('#t2').onclick=()=>setMode('2d');$('#t3').onclick=()=>setMode('3d');
-['stp','spc','nrm','md','dt','gl','rl'].forEach(id=>$('#'+id).addEventListener('input',refresh3d));
+['stp','spc','nrm','md','dt','gl','rl','bs'].forEach(id=>$('#'+id).addEventListener('input',refresh3d));
 $('#md').addEventListener('change',()=>{$('#nrm').checked=$('#md').value!=='diff';refresh3d()});
 $('#r3').onclick=()=>{V3={az:-.9,el:.55,zoom:1};draw3d()};
 {const c=$('#c3');let dr=null;
