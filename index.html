@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SOR / OTDR Trace Viewer</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1b2430;--muted:#6a7584;--line:#dde2e8;--accent:#1565c0;--trace:#1565c0;--refl:#d84315;--ok:#2e7d32;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111418;--card:#1a1f26;--fg:#e6eaf0;--muted:#8f9aa8;--line:#2c333d;--accent:#64b5f6;--trace:#4fc3f7;--refl:#ff8a65;--ok:#81c784;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111418;--card:#1a1f26;--fg:#e6eaf0;--muted:#8f9aa8;--line:#2c333d;--accent:#64b5f6;--trace:#4fc3f7;--refl:#ff8a65;--ok:#81c784;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1200px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--muted);margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,label.btn{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer}
+button:hover,label.btn:hover{border-color:var(--accent)}
+.primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600}
+input[type=file]{display:none}
+#fname{color:var(--muted);flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#drop{border:2px dashed var(--line);border-radius:10px;padding:40px 16px;text-align:center;color:var(--muted)}
+body.drag #drop,body.drag .card{border-color:var(--accent)}
+#plotwrap{display:flex;height:380px;margin-top:10px}
+#plot{position:relative;flex:1;min-width:0;touch-action:none}
+#ybar{position:relative;width:16px;margin:10px 0 28px 6px;background:var(--bg);border:1px solid var(--line);border-radius:4px;touch-action:none}
+#xbar{position:relative;height:40px;margin:6px 34px 0 50px;background:var(--bg);border:1px solid var(--line);border-radius:4px;touch-action:none}
+#xbar canvas{cursor:default;border-radius:4px}
+.win{position:absolute;border:1px solid var(--accent);box-sizing:border-box;cursor:grab}
+.win::before{content:"";position:absolute;inset:0;background:var(--accent);opacity:.2}
+.win .h{position:absolute;background:var(--accent);z-index:1}
+#xwin{top:0;bottom:0;min-width:14px}#xwin .h{top:0;bottom:0;width:7px;cursor:ew-resize}#xwin .h.l{left:-1px}#xwin .h.r{right:-1px}
+#ywin{left:0;right:0;min-height:14px}#ywin .h{left:0;right:0;height:7px;cursor:ns-resize}#ywin .h.t{top:-1px}#ywin .h.b{bottom:-1px}
+canvas{width:100%;height:100%;display:block;cursor:crosshair}
+#read{font-variant-numeric:tabular-nums;color:var(--muted);margin-top:6px;min-height:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
+dt{color:var(--muted)}dd{margin:0;word-break:break-word}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600}
+th:first-child,td:first-child,td.l,th.l{text-align:left}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--bg)}
+.r{color:var(--refl)}.err{color:var(--refl);margin-top:8px}
+input[type=number],select{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;max-width:260px}
+.bar label{display:inline-flex;gap:6px;align-items:center}
+label.btn{display:inline-flex}
+h2{font-size:15px;margin:0 0 10px}
+</style>
+</head>
+<body>
+<main>
+<h1>SOR / OTDR Trace Viewer</h1>
+<p class="sub">Telcordia SR-4731 (SOR v1 &amp; v2) and Advantest/Anritsu Q8492 .ALL files. Files are read locally in your browser and never uploaded.</p>
+
+<div class="card">
+  <div class="bar">
+    <label class="btn primary">Open trace file<input id="file" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label><label class="btn">+ Add<input id="file2" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label>
+    <button id="demo">Load demo trace</button>
+    <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D gain</button>
+    <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button></span>
+  </div>
+  <div id="err" class="err"></div>
+  <div id="drop">Drop a .sor or Advantest .all file anywhere on this page</div>
+  <div id="v3" hidden>
+    <div class="bar" style="margin-top:10px"><label>Min step <input id="stp" type="number" value="4" min="1" max="30" step="0.5" style="width:64px"> dB</label><label>Min spacing <input id="spc" type="number" value="15" min="1" max="300" style="width:64px"> km</label><label>Green ≤ <input id="gl" type="number" value="1" min="0" max="30" step="0.5" style="width:56px"> dB, red ≥ <input id="rl" type="number" value="10" min="1" max="60" style="width:56px"> dB</label><label>Data <select id="dt"><option value="full">Entire trace</option><option value="pk">Repeater peaks only</option></select></label><label>Show <select id="md"><option value="abs">Peak level</option><option value="diff">Difference vs lowest wavelength</option></select></label><label><input id="nrm" type="checkbox" checked> Remove each trace’s mean</label><button id="r3">Reset view</button></div>
+    <div id="i3" class="sub" style="margin:8px 0 0"></div>
+    <div style="height:480px;margin-top:4px"><canvas id="c3" style="cursor:grab;touch-action:none"></canvas></div>
+    <div class="sub" style="margin:6px 0 0">Height of each repeater’s return peak, per wavelength. Drag to rotate, scroll to zoom.</div>
+  </div>
+  <div id="view" hidden>
+    <div id="plotwrap"><div id="plot"><canvas id="cv"></canvas></div><div id="ybar" title="Vertical zoom: drag to pan, drag the ends to zoom, double-click for auto"><div id="ywin" class="win"><i class="h t"></i><i class="h b"></i></div></div></div>
+    <div id="xbar" title="Horizontal zoom: drag to pan, drag the ends to zoom, click to jump"><canvas id="mini"></canvas><div id="xwin" class="win"><i class="h l"></i><i class="h r"></i></div></div>
+    <div id="read">Hover the trace for distance and level · scroll to zoom · drag to pan · double-click to fit · or use the zoom bars</div>
+  </div>
+</div>
+
+<div id="detail" hidden>
+  <div class="card tbl" id="evcard"><h2>Events</h2>
+    <table><thead><tr><th>#</th><th class="l">Type</th><th>Distance</th><th>Loss (dB)</th><th>Refl. (dB)</th><th>Slope (dB/km)</th></tr></thead><tbody id="evs"></tbody></table>
+  </div>
+  <div class="grid">
+    <div class="card"><h2>Measurement</h2><dl id="m1"></dl></div>
+    <div class="card"><h2>Instrument &amp; link</h2><dl id="m2"></dl></div>
+  </div>
+</div>
+</main>
+
+<script>
+const $=s=>document.querySelector(s);
+const C=299792458;
+let D=null,V={x0:0,x1:1,cx:null};
+
+/* ---------- SOR parser ---------- */
+function parseSOR(buf){
+  const dv=new DataView(buf),u8=new Uint8Array(buf);let p=0;
+  const str=()=>{let s='';while(p<u8.length&&u8[p])s+=String.fromCharCode(u8[p++]);p++;return s};
+  const fix=n=>{let s='';for(let i=0;i<n;i++)s+=String.fromCharCode(u8[p+i]);p+=n;return s.replace(/\0/g,'')};
+  const u16=()=>{const v=dv.getUint16(p,true);p+=2;return v};
+  const i16=()=>{const v=dv.getInt16(p,true);p+=2;return v};
+  const u32=()=>{const v=dv.getUint32(p,true);p+=4;return v};
+  const i32=()=>{const v=dv.getInt32(p,true);p+=4;return v};
+
+  if(str()!=='Map')throw new Error('Not a SOR file (no "Map" block found).');
+  const mapVer=u16(),mapSize=i32(),nb=u16(),blocks={};let off=mapSize;
+  for(let i=0;i<nb-1;i++){const name=str(),ver=u16(),size=i32();blocks[name]={ver,start:off,size};off+=size}
+  const v2=mapVer>=200;
+  const go=n=>{const b=blocks[n];if(!b)return false;p=b.start;if(v2||b.ver>=200){const s=p,nm=str();if(nm!==n)p=s}return true};
+  const R={gen:{},sup:{},fx:{},ev:[],sum:{},ver:(mapVer/100).toFixed(1)};
+  if(blocks.Cksum){let c=0xFFFF;for(let i=0;i<u8.length-2;i++){c^=u8[i]<<8;for(let k=0;k<8;k++)c=c&0x8000?((c<<1)^0x1021)&0xFFFF:(c<<1)&0xFFFF}R.crc=c===dv.getUint16(u8.length-2,true)}
+
+  if(go('GenParams'))try{
+    const g=R.gen;g.lang=fix(2);g.cable=str();g.fiber=str();if(v2)g.fiberType=u16();g.wl=u16();
+    g.locA=str();g.locB=str();g.cableCode=str();g.build=fix(2);g.userOff=i32();if(v2)i32();g.operator=str();g.comments=str();
+  }catch(e){}
+  if(go('SupParams'))try{const s=R.sup;s.supplier=str();s.otdr=str();s.otdrSn=str();s.module=str();s.moduleSn=str();s.sw=str();s.other=str()}catch(e){}
+  if(!go('FxdParams'))throw new Error('FxdParams block missing.');
+  {
+    const f=R.fx;f.dt=u32();f.units=fix(2);f.wl=u16()/10;i32();if(v2)i32();
+    const n=u16();f.pw=[];f.sp=[];f.np=[];
+    for(let i=0;i<n;i++)f.pw.push(u16());
+    for(let i=0;i<n;i++)f.sp.push(u32());
+    for(let i=0;i<n;i++)f.np.push(u32());
+    f.ior=u32()/1e5;f.bc=u16()/10;f.avg=u32();if(v2)f.avgTime=u16()/10;
+    f.range=u32();if(v2)i32();
+  }
+  if(go('KeyEvents'))try{
+    const n=u16();
+    for(let i=0;i<n;i++){
+      const e={n:u16(),tt:u32(),slope:i16()/1000,loss:i16()/1000,refl:i32()/1000,type:fix(8)};
+      u32();u32();u32();u32();e.peak=u32();e.comment=str();R.ev.push(e);
+    }
+    R.sum.loss=i32()/1000;R.sum.start=i32();R.sum.len=u32();R.sum.orl=u16()/1000;
+  }catch(e){}
+  if(!go('DataPts'))throw new Error('DataPts block missing.');
+  u32();const nt=u16();const np=u32(),sf=u16();
+  const raw=new Uint16Array(np);let mx=0;
+  for(let i=0;i<np;i++){raw[i]=u16();if(raw[i]>mx)mx=raw[i]}
+  const y=new Float32Array(np),k=0.001*sf/1000;
+  for(let i=0;i<np;i++)y[i]=(mx-raw[i])*k;
+  R.absOff=-mx*k;return finish(R,y);
+}
+
+/* ---------- Advantest Q8492 COTDR .ALL parser (reverse-engineered) ----------
+   0x000-0x05f  16-char fields: maker, model, version, type, format; then points @0x58, averages @0x60
+   0x080-0x1bf  ';'-separated ASCII settings   0x1e0-0x2df  ASCII labels (Operator, Fiber#, Near, Far, Note...)
+   0x2e0-0x3df  binary block (index of refraction x1e4 at 0x2f8, wavelength/interval as doubles)
+   0x3e0-       records of N big-endian int32 linear-power samples (record 2 = record 1 + constant) */
+function parseAny(buf){const t=String.fromCharCode(...new Uint8Array(buf,0,Math.min(9,buf.byteLength)));return t==='ADVANTEST'?parseALL(buf):parseSOR(buf)}
+function parseALL(buf){
+  const u8=new Uint8Array(buf),dv=new DataView(buf),off=0x3e0;
+  const asc=(a,b)=>{let s='';for(let i=a;i<b&&i<u8.length;i++)s+=u8[i]>31&&u8[i]<127?String.fromCharCode(u8[i]):' ';return s};
+  const h=[];for(let i=0;i<5;i++)h.push(asc(i*16,i*16+16).trim());
+  const N=parseInt(asc(0x58,0x60));
+  if(!(N>0)||u8.length<off+4*N)throw new Error('Advantest ALL: unexpected header or data size.');
+  const txt=asc(0x80,0x1c0),parts=txt.split(';').map(s=>s.trim()),kv={};
+  parts.forEach(s=>{const i=s.indexOf(':');if(i>0&&!/^\d{4}\//.test(s))kv[s.slice(0,i).trim()]=s.slice(i+1).trim()});
+  const lab={};for(let o=480;o<660;o+=20){const s=asc(o,o+18),i=s.indexOf(':');if(i>0)lab[s.slice(0,i).trim()]=s.slice(i+1).trim()}
+  const note=asc(660,0x2de).replace(/^\s*Note\s*:/,'').trim();
+  const dm=/(\d{4})\/(\d\d)\/(\d\d)\s+(\d\d):(\d\d)/.exec(txt);
+  const dt=dm?new Date(+dm[1],dm[2]-1,+dm[3],+dm[4],+dm[5]).getTime()/1000:0;
+  const ior=parseFloat(kv.INDEX)||1.47,endKm=parseFloat((kv.END||'').split(',')[1]);
+  const dx=endKm>0?endKm/(N-1):299.792458/ior/1000;           // 1 µs sample interval, distance = t·c/n
+  const pm=/([\d.]+)\s*(ms|us|ns)/.exec(kv.PW||''),pw=pm?parseFloat(pm[1])*{ms:1e6,us:1e3,ns:1}[pm[2]]:null;
+  const A=new Float64Array(N);let mx=-Infinity;
+  for(let i=0;i<N;i++){const v=dv.getInt32(off+4*i);A[i]=v;if(v>mx)mx=v}
+  const dd=[];for(let i=1;i<N;i+=3)dd.push(Math.abs(A[i]-A[i-1]));dd.sort((a,b)=>a-b);
+  const fl=Math.max(2.5*dd[dd.length>>1]/0.954,mx*1e-4);       // noise floor: clamp negatives / noise before log
+  const y=new Float32Array(N);for(let i=0;i<N;i++)y[i]=10*Math.log10(Math.max(A[i],fl)/mx);
+  let se=N-1;{const yf=10*Math.log10(fl/mx)+4;while(se>0&&y[se]<=yf)se--}   // last sample clearly above the noise floor
+  const tr=Math.floor((u8.length-off)/(4*N)),off2=tr>1?dv.getInt32(off+4*N)-dv.getInt32(off):null;
+  const gm=/GAIN\s*(\d+)/.exec(txt),cm=/CH:(\d+)/.exec(txt);
+  return{ver:'Advantest ALL',gen:{cable:lab['Cable#'],fiber:lab['Fiber#'],locA:lab.Near,locB:lab.Far,operator:lab.Operator,comments:note},
+    sup:{supplier:h[0],otdr:h[1],sw:h[2]},fx:{dt,wl:parseFloat(kv['W.Length'])||0,pw:[pw],ior,avg:parseInt(kv['AVERAGE No.'])||parseInt(asc(0x60,0x70))||0,units:'km'},
+    ev:[],sum:{},dx,y,sigIdx:Math.min(N-1,se+30),absOff:10*Math.log10(mx/1e6),
+    extra:[['Mode',parts[0]],['Title',parts[1]],['Distance range',kv.DR],['Laser mode',kv.OPTmode],['Gain',gm&&gm[1]],['Filter',kv.FILTER],['Channel',cm&&cm[1]],
+      ['Direction',lab.Direction],['CO# / Floor# / Rack#',[lab['CO#'],lab['Floor#'],lab['Rack#']].filter(Boolean).join(' / ')],['Comment',kv.Comment],
+      ['Records in file',tr+(off2!=null?` (2nd = 1st + ${off2.toLocaleString()})`:'')],['Level scale','10·log10(power / peak), clamped at noise floor']]};
+}
+
+function finish(R,y){
+  const f=R.fx,ior=f.ior||1.468;
+  R.dx=(f.sp[0]||1000)*1e-14*C/ior/1000;               // km per sample (spacing unit is 1e-8 µs = 10 fs)
+  R.y=y;
+  R.ev.forEach(e=>e.d=e.tt*1e-10*C/ior/1000);if(R.sum.len)R.sum.km=R.sum.len*1e-10*C/ior/1000;               // km, one-way time in 100 ps units
+  const l=R.ev[R.ev.length-1];                               // sanity check against sample index
+  if(l&&l.d>0&&l.peak>0){const r=Math.log10(l.peak*R.dx/l.d);if(Math.abs(r)>.5){const s=Math.pow(10,Math.round(r));R.ev.forEach(e=>e.d*=s)}}
+  return R;
+}
+
+/* ---------- demo data ---------- */
+function demo(){
+  const dx=0.008,n=3000,y=new Float32Array(n),att=0.2;let seed=7;const rnd=()=>(seed=seed*16807%2147483647)/2147483647-.5;
+  const ev=[{d:0.0,l:0,r:-45},{d:5,l:0.3,r:0},{d:12,l:0.6,r:-38},{d:20,l:0,r:-30}];
+  for(let i=0;i<n;i++){const d=i*dx;let v=28-att*d;
+    for(const e of ev){if(d>e.d&&e.d>0&&e.d<20)v-=e.l;}
+    if(d>20.05)v=-4;
+    for(const e of ev)if(Math.abs(d-e.d)<dx*1.5&&e.r!==0)v+=e.r===-30?7:4;
+    y[i]=v+rnd()*(d>20?1.2:.18+d*.02)}
+  const R={ver:'demo',gen:{cable:'DEMO-CABLE',fiber:'F001',locA:'Site A',locB:'Site B',operator:'Synthetic data'},sup:{otdr:'Demo generator'},
+    fx:{dt:Date.now()/1000,units:'km',wl:1550,pw:[100],sp:[Math.round(dx*1000*2*1.4682/C*1e11*1000*1)],np:[n],ior:1.4682,avg:15000,avgTime:30,range:0},
+    ev:ev.map((e,i)=>({n:i+1,d:e.d,loss:e.l,refl:e.r,slope:att,type:(e.r?'1F9999LS':'0F9999LS'),peak:0,comment:''})),sum:{loss:28.4-0,orl:32.1}};
+  R.dx=dx;R.y=y;R.ev[3].type='1E9999LS';return R;
+}
+
+/* ---------- UI ---------- */
+function show(R,name){
+  D=R;{let a=1e9,z=-1e9;for(let i=0;i<R.y.length;i++){const v=R.y[i];if(v<a)a=v;if(v>z)z=v}const p=(z-a)*.05||1;R.y0=a-p;R.y1=z+p}$('#err').textContent='';$('#drop').hidden=true;$('#view').hidden=false;$('#detail').hidden=false;
+  $('#fname').textContent=name;V={x0:0,x1:R.dx*(R.y.length-1),cx:null};
+  $('#evcard').hidden=!R.ev.length;drawMini();{const se=sigEnd();if(se<R.y.length*.6)V.x1=se*R.dx}
+  const f=R.fx,g=R.gen,s=R.sup,last=R.ev[R.ev.length-1];
+  const row=(a)=>a.filter(r=>r[1]!=null&&String(r[1]).trim()!=='').map(r=>`<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('');
+  $('#m1').innerHTML=row([
+    ['Date',f.dt?new Date(f.dt*1000).toLocaleString():''],['Wavelength',f.wl+' nm'],
+    ['Pulse width',f.pw[0]!=null?f.pw[0]+' ns':''],['Index of refraction',f.ior?f.ior.toFixed(5):''],
+    ['Sample spacing',(R.dx*1000).toFixed(3)+' m'],['Data points',R.y.length.toLocaleString()],
+    ['Averages',f.avg?f.avg.toLocaleString()+(f.avgTime?` (${f.avgTime} s)`:''):''],
+    ['Trace range',(R.dx*(R.y.length-1)).toLocaleString(undefined,{maximumFractionDigits:1})+' km'],['Signal ends ≈',(sigEnd()*R.dx).toFixed(1)+' km'],['End of fiber (events)',R.sum.km?R.sum.km.toFixed(3)+' km':last?last.d.toFixed(3)+' km':''],['Total loss',R.sum.loss!=null?R.sum.loss.toFixed(3)+' dB':''],
+    ['ORL',R.sum.orl?R.sum.orl.toFixed(2)+' dB':''],['SOR version',R.ver],['Checksum',R.crc==null?'':R.crc?'valid (CRC-16)':'mismatch (some instruments use their own)']]);
+  $('#m2').innerHTML=row([['Cable ID',g.cable],['Fiber ID',g.fiber],['Fiber type',g.fiberType?'ITU-T G.'+g.fiberType:''],['Build condition',{BC:'As-built',CC:'As-current',RC:'As-repaired',OT:'Other'}[g.build]||g.build],['Location A',g.locA],['Location B',g.locB],
+    ['Operator',g.operator],['Comments',g.comments],['Supplier',s.supplier],['OTDR',s.otdr],['OTDR serial',s.otdrSn],
+    ['Module',s.module],['Module serial',s.moduleSn],['Software',s.sw],...(R.extra||[])]);
+  $('#evs').innerHTML=R.ev.map((e,i)=>{
+    const rf=e.type[0]!=='0',end=e.type[1]==='E'||i===R.ev.length-1&&R.ev.length>1;
+    return `<tr data-i="${i}"><td>${e.n}</td><td class="l ${rf?'r':''}">${rf?'Reflective':'Non-reflective'}${end?' · end':''} <small>${e.type}</small></td><td>${e.d.toFixed(4)} km</td><td>${e.loss.toFixed(3)}</td><td>${rf?e.refl.toFixed(2):'–'}</td><td>${e.slope.toFixed(3)}</td></tr>`}).join('');
+  draw();
+}
+
+function sigEnd(R=D){if(R.sigIdx!=null)return R.sigIdx; // estimate where the backscatter/loopback signal drops into the noise floor
+  const y=R.y,N=y.length,W=Math.max(50,N>>10),nw=Math.floor(N/W),m=[];
+  for(let k=0;k<nw;k++){let s=0;for(let i=k*W;i<k*W+W;i++)s+=y[i];m.push(s/W)}
+  const t=m.slice(Math.floor(nw*.9)).sort((a,b)=>a-b),nf=t[t.length>>1],sd=t[Math.floor(t.length*.9)]-nf;
+  let last=0;for(let k=0;k<nw;k++)if(m[k]>nf+Math.max(3*sd,1))last=k;
+  return Math.min(N-1,Math.round((last+1)*W*1.05)+W)}
+function nice(r,n){const s=Math.pow(10,Math.floor(Math.log10(r/n))),e=r/n/s;return s*(e>=5?10:e>=2?5:e>=1?2:1)}
+
+function draw(){
+  if(!D)return;
+  const c=$('#cv'),b=c.getBoundingClientRect(),dpr=devicePixelRatio||1;
+  c.width=b.width*dpr;c.height=b.height*dpr;
+  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+  const W=b.width,H=b.height,m={l:50,r:12,t:10,b:28},pw=W-m.l-m.r,ph=H-m.t-m.b;
+  const cs=getComputedStyle(document.documentElement),col=n=>cs.getPropertyValue(n).trim();
+  const {y,dx}=D,N=y.length;
+  const i0=Math.max(0,Math.floor(V.x0/dx)),i1=Math.min(N-1,Math.ceil(V.x1/dx));
+  let lo=1e9,hi=-1e9;for(let i=i0;i<=i1;i++){const v=y[i];if(v<lo)lo=v;if(v>hi)hi=v}
+  const pad=(hi-lo)*.06||1;lo-=pad;hi+=pad;if(V.y){lo=V.y[0];hi=V.y[1]}V.m=m;V.pw=pw;V.lo=lo;V.hi=hi;V.ph=ph;syncBars();
+  const X=x=>m.l+(x-V.x0)/(V.x1-V.x0)*pw,Y=v=>m.t+(hi-v)/(hi-lo)*ph;
+  g.font='11px system-ui,sans-serif';g.fillStyle=col('--muted');g.strokeStyle=col('--line');g.lineWidth=1;
+  const sx=nice(V.x1-V.x0,8),sy=nice(hi-lo,6);
+  g.textAlign='center';
+  for(let x=Math.ceil(V.x0/sx)*sx;x<=V.x1;x+=sx){const px=Math.round(X(x))+.5;g.beginPath();g.moveTo(px,m.t);g.lineTo(px,m.t+ph);g.stroke();g.fillText(+x.toFixed(4),px,H-10)}
+  g.textAlign='right';
+  for(let v=Math.ceil(lo/sy)*sy;v<=hi;v+=sy){const py=Math.round(Y(v))+.5;g.beginPath();g.moveTo(m.l,py);g.lineTo(m.l+pw,py);g.stroke();g.fillText(+v.toFixed(2),m.l-6,py+4)}
+  g.textAlign='left';g.fillText('km',m.l+pw-16,H-10);g.save();g.translate(12,m.t+ph/2);g.rotate(-Math.PI/2);g.textAlign='center';g.fillText('Relative level (dB)',0,0);g.restore();
+  g.save();g.beginPath();g.rect(m.l,m.t,pw,ph);g.clip();
+  g.strokeStyle=col('--trace');g.lineWidth=1.2;g.beginPath();
+  const n=i1-i0+1,per=n/pw;
+  if(per<=1){for(let i=i0;i<=i1;i++)g.lineTo(X(i*dx),Y(y[i]))}
+  else for(let p=0;p<pw;p++){const a=i0+Math.floor(p*per),e=Math.min(i1,i0+Math.floor((p+1)*per));let mn=1e9,mx=-1e9;
+    for(let i=a;i<=e;i++){const v=y[i];if(v<mn)mn=v;if(v>mx)mx=v}g.moveTo(m.l+p+.5,Y(mx));g.lineTo(m.l+p+.5,Y(mn))}
+  g.stroke();
+  g.setLineDash([4,4]);g.textAlign='center';
+  for(const e of D.ev){const px=X(e.d);if(px<m.l-10||px>m.l+pw+10)continue;
+    g.strokeStyle=g.fillStyle=e.type[0]!=='0'?col('--refl'):col('--ok');g.beginPath();g.moveTo(px,m.t+14);g.lineTo(px,m.t+ph);g.stroke();g.fillText(e.n,px,m.t+10)}
+  g.setLineDash([]);
+  if(V.cx!=null){g.strokeStyle=col('--muted');g.beginPath();g.moveTo(V.cx,m.t);g.lineTo(V.cx,m.t+ph);g.stroke()}
+  g.restore();
+}
+
+const view=()=>{const c=$('#cv').getBoundingClientRect();return c};
+const xAt=px=>V.x0+(px-V.m.l)/V.pw*(V.x1-V.x0);
+function zoom(f,px){
+  const full=D.dx*(D.y.length-1),xm=px==null?(V.x0+V.x1)/2:xAt(px),s=Math.min(full,Math.max(D.dx*8,(V.x1-V.x0)*f));
+  const t=px==null?.5:(xm-V.x0)/(V.x1-V.x0);
+  V.x0=xm-t*s;V.x1=V.x0+s;clamp();draw();
+}
+function clamp(){const full=D.dx*(D.y.length-1),s=V.x1-V.x0;if(V.x0<0){V.x0=0;V.x1=s}if(V.x1>full){V.x1=full;V.x0=full-s}}
+
+const cv=$('#cv');let drag=null;
+cv.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY>0?1.25:.8,e.clientX-view().left)},{passive:false});
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);drag={x:e.clientX,x0:V.x0,x1:V.x1}});
+cv.addEventListener('pointerup',()=>drag=null);
+cv.addEventListener('pointermove',e=>{
+  if(!D)return;const px=e.clientX-view().left;
+  if(drag){const dxk=(e.clientX-drag.x)/V.pw*(drag.x1-drag.x0);V.x0=drag.x0-dxk;V.x1=drag.x1-dxk;clamp()}
+  V.cx=px;draw();
+  const x=xAt(px),i=Math.max(0,Math.min(D.y.length-1,Math.round(x/D.dx)));
+  $('#read').textContent=`${x.toFixed(4)} km  ·  ${D.y[i].toFixed(2)} dB (relative)`;
+});
+cv.addEventListener('pointerleave',()=>{V.cx=null;draw()});
+cv.addEventListener('dblclick',fit);
+function fit(){if(!D)return;V.x0=0;V.x1=D.dx*(D.y.length-1);V.y=null;draw()}
+$('#zin').onclick=()=>D&&zoom(.6);$('#zout').onclick=()=>D&&zoom(1.6);$('#zfit').onclick=fit;$('#zsig').onclick=()=>{if(D){V.x0=0;V.x1=sigEnd()*D.dx;V.y=null;draw()}};
+$('#evs').addEventListener('click',e=>{
+  const tr=e.target.closest('tr');if(!tr)return;const ev=D.ev[+tr.dataset.i],s=Math.min(D.dx*(D.y.length-1),Math.max(D.dx*40,(V.x1-V.x0)));
+  V.x0=ev.d-s/2;V.x1=V.x0+s;clamp();draw();
+});
+new ResizeObserver(draw).observe($('#plot'));
+
+/* ---------- zoom bars: x overview + y range ---------- */
+function syncBars(){
+  const full=D.dx*(D.y.length-1),c=v=>Math.max(0,Math.min(100,v)),xw=$('#xwin').style,yw=$('#ywin').style;
+  const a=c(V.x0/full*100),b=c(V.x1/full*100);xw.left=a+'%';xw.width=Math.max(0,b-a)+'%';
+  const sp=D.y1-D.y0,t=c((D.y1-V.hi)/sp*100),u=c((D.y1-V.lo)/sp*100);yw.top=t+'%';yw.height=Math.max(0,u-t)+'%';
+}
+function drawMini(){
+  if(!D)return;
+  const c=$('#mini'),b=c.getBoundingClientRect(),dpr=devicePixelRatio||1;
+  c.width=b.width*dpr;c.height=b.height*dpr;
+  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+  g.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--trace').trim();g.globalAlpha=.85;
+  const W=b.width,H=b.height,N=D.y.length,per=N/W,sp=D.y1-D.y0;g.beginPath();
+  for(let p=0;p<W;p++){const a=Math.floor(p*per),e=Math.min(N-1,Math.max(a,Math.floor((p+1)*per)));let mn=1e9,mx=-1e9;
+    for(let i=a;i<=e;i++){const v=D.y[i];if(v<mn)mn=v;if(v>mx)mx=v}
+    const t=(D.y1-mx)/sp*H;g.moveTo(p+.5,t);g.lineTo(p+.5,Math.max((D.y1-mn)/sp*H,t+1))}
+  g.stroke();
+}
+function barDrag(bar,start,move){
+  let st=null;
+  bar.addEventListener('pointerdown',e=>{if(!D)return;e.preventDefault();bar.setPointerCapture(e.pointerId);st=start(e,bar.getBoundingClientRect())});
+  bar.addEventListener('pointermove',e=>{if(st)move(e,st)});
+  const end=()=>st=null;bar.addEventListener('pointerup',end);bar.addEventListener('pointercancel',end);
+}
+barDrag($('#xbar'),(e,r)=>{
+  const full=D.dx*(D.y.length-1),k=full/r.width,h=e.target.classList;
+  let mode=h.contains('l')?'l':h.contains('r')?'r':e.target===$('#xwin')?'pan':'jump';
+  if(mode==='jump'){const c=(e.clientX-r.left)*k,s=V.x1-V.x0;V.x0=c-s/2;V.x1=c+s/2;clamp();draw();mode='pan'}
+  return{mode,k,full,x0:V.x0,x1:V.x1,cx:e.clientX};
+},(e,s)=>{
+  const d=(e.clientX-s.cx)*s.k,ms=D.dx*8;
+  if(s.mode==='pan'){const w=s.x1-s.x0;V.x0=s.x0+d;V.x1=V.x0+w;clamp()}
+  else if(s.mode==='l')V.x0=Math.max(0,Math.min(s.x0+d,s.x1-ms));
+  else V.x1=Math.min(s.full,Math.max(s.x1+d,s.x0+ms));
+  draw();
+});
+barDrag($('#ybar'),(e,r)=>{
+  const span=D.y1-D.y0,k=span/r.height,h=e.target.classList;
+  let mode=h.contains('t')?'t':h.contains('b')?'b':e.target===$('#ywin')?'pan':'jump',lo=V.lo,hi=V.hi;
+  if(mode==='jump'){const c=D.y1-(e.clientY-r.top)*k,s=hi-lo;lo=c-s/2;hi=c+s/2;V.y=[lo,hi];draw();mode='pan'}
+  return{mode,k,span,lo,hi,cy:e.clientY};
+},(e,s)=>{
+  const d=-(e.clientY-s.cy)*s.k,ms=s.span*.01;let lo=s.lo,hi=s.hi;
+  if(s.mode==='pan'){lo+=d;hi+=d}else if(s.mode==='t')hi=Math.max(lo+ms,hi+d);else lo=Math.min(hi-ms,lo+d);
+  V.y=[lo,hi];draw();
+});
+$('#ybar').addEventListener('dblclick',()=>{V.y=null;draw()});
+new ResizeObserver(drawMini).observe($('#xbar'));
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{drawMini();draw()});
+
+/* ---------- several traces + 3D repeater-gain surface ---------- */
+let T=[],mode='2d',V3={az:-.9,el:.55,zoom:1},S3=null;
+function repeaters(R,step,spacing,end){            // km positions of upward level steps (repeater loop-backs)
+  const w=Math.max(2,Math.round(0.5/R.dx)),gap=Math.max(2,Math.round(spacing/R.dx)),o=[],rv=[];
+  for(let i=w;i<end-w&&i+w<R.y.length;i++){const v=rise(R,i,w);if(v<=step)continue;const L=o.length-1;
+    if(L<0||i-o[L]>gap){o.push(i);rv.push(v)}else if(v>rv[L]){o[L]=i;rv[L]=v}}
+  return o.map(i=>i*R.dx);
+}
+function gridKm(ts,EI){const xe=Math.min(...ts.map(R=>EI.get(R)*R.dx)),nb=1200,bw=xe/nb,g=[];for(let j=0;j<nb;j++)g.push((j+.5)*bw);g.bw=bw;return g}   // common distance grid up to the shortest signal
+function binAt(R,k,bw){const s=ps(R),a=Math.max(0,Math.round((k-bw/2)/R.dx)),b=Math.min(R.y.length,Math.round((k+bw/2)/R.dx));return(b>a?(s[b]-s[a])/(b-a):R.y[Math.min(a,R.y.length-1)])+(R.absOff||0)}   // mean level in a bin
+function ps(R){if(!R.ps){const y=R.y,s=new Float64Array(y.length+1);for(let i=0;i<y.length;i++)s[i+1]=s[i]+y[i];R.ps=s}return R.ps}
+function rise(R,i,w){const s=ps(R);return(s[i+w+1]-s[i+1])/w-(s[i]-s[i-w])/w}   // mean level of the next w samples minus the previous w
+function peakAt(R,km,w,step){const n=R.y.length,a=Math.max(1,Math.round((km-w)/R.dx)),z=Math.min(n-2,Math.round((km+w)/R.dx));
+  if(!R.sm){const k=Math.max(1,Math.round(0.15/R.dx)),s=ps(R),o=new Float32Array(n);for(let i=0;i<n;i++){const l=Math.max(0,i-k),h=Math.min(n,i+k+1);o[i]=(s[h]-s[l])/(h-l)}R.sm=o}
+  const rw=Math.max(2,Math.round(0.5/R.dx));let m=-1e9,rm=-1e9;
+  for(let i=a;i<=z;i++){if(R.sm[i]>m)m=R.sm[i];if(i>=rw&&i+rw<n){const v=rise(R,i,rw);if(v>rm)rm=v}}
+  return rm<step*.6?NaN:m+(R.absOff||0)}   // NaN when no real repeater step exists here in this trace
+function surf(){
+  const st=+$('#stp').value||4,sp=+$('#spc').value||15,nrm=$('#nrm').checked;
+  const ts=T.slice().sort((a,b)=>a.fx.wl-b.fx.wl),EI=new Map(ts.map(R=>[R,sigEnd(R)]));
+  const full=$('#dt').value==='full',ref=ts.reduce((a,b)=>EI.get(b)*b.dx>EI.get(a)*a.dx?b:a),km0=full?gridKm(ts,EI):repeaters(ref,st,sp,EI.get(ref));
+  let Z=ts.map(R=>km0.map(k=>full?binAt(R,k,km0.bw):k<=EI.get(R)*R.dx?peakAt(R,k,1.5,st):NaN));
+  const ok=km0.map((k,r)=>Z.filter(z=>isFinite(z[r])).length>=Math.min(2,ts.length)),km=km0.filter((k,r)=>ok[r]);Z=Z.map(z=>z.filter((v,r)=>ok[r]));
+  const spread=km.map((k,r)=>{const f=Z.map(z=>z[r]).filter(isFinite);return Math.max(...f)-Math.min(...f)});   // spread of absolute levels across traces at each distance (drives the colour)
+  if(nrm)Z=Z.map(z=>{const f=z.filter(isFinite),m=f.reduce((s,v)=>s+v,0)/(f.length||1);return z.map(v=>v-m)});
+  const diff=$('#md').value==='diff';if(diff)Z=Z.map(z=>z.map((v,r)=>v-Z[0][r]));
+
+  const uniq=new Set(ts.map(R=>R.fx.wl)).size===ts.length;
+  return{ts,km,Z,diff,full,spr:spread,ya:ts.map((R,i)=>uniq?R.fx.wl:i),yl:ts.map((R,i)=>uniq?R.fx.wl.toFixed(2)+' nm':'#'+(i+1))};
+}
+function refresh3d(){
+  if(T.length<2){S3=null;return}
+  S3=surf();const dz=S3.diff?S3.Z[S3.Z.length-1].filter(isFinite):[],dm=dz.reduce((s,v)=>s+v,0)/(dz.length||1);
+  $('#i3').textContent=S3.km.length+(S3.full?' bins, entire trace':' repeaters')+' \u00b7 '+S3.ts.map(R=>R.fx.wl?R.fx.wl+' nm ('+(299792.458/R.fx.wl).toFixed(2)+' THz)':R.name).join(' \u00b7 ');
+  if(S3.diff&&dz.length)$('#i3').textContent+=' · Δ '+S3.yl[S3.yl.length-1]+' − '+S3.yl[0]+': mean '+dm.toFixed(1)+' dB, range '+Math.min(...dz).toFixed(1)+' to '+Math.max(...dz).toFixed(1)+' dB';
+  draw3d();
+}
+function draw3d(){
+  const c=$('#c3'),b=c.getBoundingClientRect(),dpr=devicePixelRatio||1;
+  c.width=b.width*dpr;c.height=b.height*dpr;
+  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.font='11px system-ui,sans-serif';
+  const cs=getComputedStyle(document.documentElement),col=n=>cs.getPropertyValue(n).trim();
+  const {ts,km,Z,ya,yl,spr}=S3||{km:[],ts:[]};
+  if(km.length<2||ts.length<2){g.fillStyle=col('--muted');g.fillText('Load at least 2 traces; if no repeaters are found, lower the minimum step.',16,28);return}
+  const fin=Z.flat().filter(isFinite),mab=Math.max(...fin.map(Math.abs))||1,zmin=S3.diff?-mab:Math.min(...fin),zmax=S3.diff?mab:Math.max(...fin),zs=zmax-zmin||1;
+  const x0=km[0],x1=km[km.length-1],y0=ya[0],y1=ya[ya.length-1],XS=1.5,YS=.8,ZS=.6;
+  const nx=v=>(v-x0)/((x1-x0)||1)*2-1,ny=v=>(v-y0)/((y1-y0)||1)*2-1,nz=v=>(v-zmin)/zs*2-1;
+  const ca=Math.cos(V3.az),sa=Math.sin(V3.az),ce=Math.cos(V3.el),se=Math.sin(V3.el);
+  const S=Math.min(b.width/4.6,b.height/2.9)*V3.zoom,cx=b.width/2,cy=b.height/2+12;
+  const P=(x,y,z)=>{x*=XS;y*=YS;z*=ZS;const a=x*ca-y*sa,d=x*sa+y*ca;return[cx+a*S,cy-(z*ce+d*se)*S,d*ce-z*se]};
+  const cm=u=>'hsl('+Math.round(120-120*u)+',70%,45%)',gl=+$('#gl').value||1,rl=Math.max(gl+.1,+$('#rl').value||10),path=(p,cl)=>{g.beginPath();p.forEach((q,i)=>g[i?'lineTo':'moveTo'](q[0],q[1]));if(cl)g.closePath()};
+  const cn=[[-1,-1],[1,-1],[1,1],[-1,1]],Bt=cn.map(a=>P(a[0],a[1],-1)),Tp=cn.map(a=>P(a[0],a[1],1));
+  g.strokeStyle=col('--line');g.lineWidth=1;path(Bt,1);g.stroke();path(Tp,1);g.stroke();Bt.forEach((p,i)=>{path([p,Tp[i]]);g.stroke()});
+  const Q=[];
+  for(let t=0;t<ts.length-1;t++)for(let r=0;r<km.length-1;r++){
+    const zz=[Z[t][r],Z[t][r+1],Z[t+1][r+1],Z[t+1][r]];if(zz.some(v=>!isFinite(v)))continue;
+    const p=[P(nx(km[r]),ny(ya[t]),nz(zz[0])),P(nx(km[r+1]),ny(ya[t]),nz(zz[1])),P(nx(km[r+1]),ny(ya[t+1]),nz(zz[2])),P(nx(km[r]),ny(ya[t+1]),nz(zz[3]))];
+    Q.push({p,d:p.reduce((s,q)=>s+q[2],0)/4,u:Math.max(0,Math.min(1,((spr[r]+spr[r+1])/2-gl)/(rl-gl)))});
+  }
+  Q.sort((a,b)=>b.d-a.d);g.lineWidth=.6;g.strokeStyle=col('--card');
+  const dense=km.length>200;for(const q of Q){path(q.p,1);g.fillStyle=cm(q.u);g.fill();if(dense)g.strokeStyle=g.fillStyle;g.stroke()}
+  g.strokeStyle=col('--fg');g.lineWidth=1.3;
+  ts.forEach((R,t)=>{let on=false;g.beginPath();km.forEach((k,r)=>{const v=Z[t][r];if(!isFinite(v)){on=false;return}const p=P(nx(k),ny(ya[t]),nz(v));g[on?'lineTo':'moveTo'](p[0],p[1]);on=true});g.stroke()});
+  g.fillStyle=col('--muted');g.textAlign='center';
+  const ey=P(0,-1,-1)[1]>P(0,1,-1)[1]?-1:1,ex=P(-1,0,-1)[1]>P(1,0,-1)[1]?-1:1;
+  for(let i=0;i<=4;i++){const v=x0+(x1-x0)*i/4,p=P(nx(v),ey,-1);g.fillText(v.toFixed(0),p[0],p[1]+14)}
+  {const p=P(0,ey,-1);g.fillText('Distance (km)',p[0],p[1]+30)}
+  ts.forEach((R,t)=>{const p=P(ex,ny(ya[t]),-1),r=p[0]>cx;g.textAlign=r?'left':'right';g.fillText(yl[t],p[0]+(r?8:-8),p[1]+4)});
+  {const p=P(ex,0,-1),r=p[0]>cx;g.textAlign=r?'left':'right';g.fillText('Wavelength',p[0]+(r?8:-8),p[1]+20)}
+  const zc=cn.reduce((a,q)=>P(q[0],q[1],-1)[0]<P(a[0],a[1],-1)[0]?q:a);g.textAlign='right';
+  for(let i=0;i<=4;i++){const v=zmin+zs*i/4,p=P(zc[0],zc[1],nz(v));g.fillText(v.toFixed(1),p[0]-6,p[1]+4)}
+  const bx=16,by=14,bw=120;for(let i=0;i<bw;i++){g.fillStyle=cm(i/bw);g.fillRect(bx+i,by,1,8)}
+  g.fillStyle=col('--muted');g.textAlign='left';g.fillText('≤'+gl+' dB',bx,by+22);g.textAlign='right';g.fillText('≥'+rl+' dB',bx+bw,by+22);
+  g.textAlign='left';g.fillText('Colour = difference between traces',bx+bw+10,by+9);g.fillText('Height = '+(S3.diff?'difference vs '+yl[0]:$('#nrm').checked?'level vs trace mean':'level (absolute)')+' (dB)',bx,by+38);
+}
+function setMode(m){
+  mode=m;$('#view').hidden=m!=='2d'||!D;$('#detail').hidden=m!=='2d'||!D;$('#v3').hidden=m!=='3d';$('#z2').hidden=m!=='2d';
+  $('#t2').className=m==='2d'?'primary':'';$('#t3').className=m==='3d'?'primary':'';
+  if(m==='3d')refresh3d();else if(D)draw();
+}
+async function loadFiles(files,add){
+  const fl=[...files];if(!fl.length)return;
+  const out=add?T.slice():[];$('#err').textContent='';
+  for(const f of fl){if(out.length>=8)break;
+    try{const R=parseAny(await f.arrayBuffer());R.name=f.name;out.push(R)}catch(e){$('#err').textContent+='Could not read '+f.name+': '+e.message+'  '}}
+  if(!out.length)return;T=out;
+  $('#sel').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+R.name.replace(/[<&"]/g,'')+(R.fx.wl?' ('+R.fx.wl+' nm)':'')+'</option>').join('');
+  $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;$('#t2').hidden=$('#t3').hidden=T.length<2;
+  const last=T[T.length-1];$('#sel').value=T.length-1;show(last,last.name);
+  $('#md').value=T.length===2?'diff':'abs';$('#nrm').checked=T.length!==2;
+  if(T.length<2)mode='2d';setMode(mode);
+}
+$('#sel').onchange=e=>{const R=T[+e.target.value];show(R,R.name);setMode(mode)};
+$('#t2').onclick=()=>setMode('2d');$('#t3').onclick=()=>setMode('3d');
+['stp','spc','nrm','md','dt','gl','rl'].forEach(id=>$('#'+id).addEventListener('input',refresh3d));
+$('#md').addEventListener('change',()=>{$('#nrm').checked=$('#md').value!=='diff';refresh3d()});
+$('#r3').onclick=()=>{V3={az:-.9,el:.55,zoom:1};draw3d()};
+{const c=$('#c3');let dr=null;
+  c.addEventListener('pointerdown',e=>{c.setPointerCapture(e.pointerId);dr={x:e.clientX,y:e.clientY,az:V3.az,el:V3.el}});
+  c.addEventListener('pointermove',e=>{if(!dr)return;V3.az=dr.az+(e.clientX-dr.x)*.008;V3.el=Math.max(-.2,Math.min(1.5,dr.el+(e.clientY-dr.y)*.008));draw3d()});
+  c.addEventListener('pointerup',()=>dr=null);
+  c.addEventListener('wheel',e=>{e.preventDefault();V3.zoom=Math.max(.4,Math.min(4,V3.zoom*(e.deltaY>0?.9:1.1)));draw3d()},{passive:false});
+  new ResizeObserver(()=>{if(mode==='3d'&&S3)draw3d()}).observe(c);}
+
+/* ---------- file loading ---------- */
+async function loadFile(f){
+  try{const R=parseAny(await f.arrayBuffer());show(R,f.name)}
+  catch(e){$('#err').textContent='Could not read '+f.name+': '+e.message}
+}
+$('#file').onchange=e=>{loadFiles(e.target.files,false);e.target.value=''};
+$('#file2').onchange=e=>{loadFiles(e.target.files,true);e.target.value=''};
+$('#demo').onclick=()=>{T=[];$('#sel').hidden=true;$('#fname').hidden=false;$('#t2').hidden=$('#t3').hidden=true;mode='2d';show(demo(),'Demo trace (synthetic)');setMode('2d')};
+addEventListener('dragover',e=>{e.preventDefault();document.body.classList.add('drag')});
+addEventListener('dragleave',()=>document.body.classList.remove('drag'));
+addEventListener('drop',e=>{e.preventDefault();document.body.classList.remove('drag');loadFiles(e.dataTransfer.files,e.shiftKey)});
+</script>
+</body>
+</html>
