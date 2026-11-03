@@ -64,7 +64,7 @@ h2{font-size:15px;margin:0 0 10px}
   <div class="bar">
     <label class="btn primary">Open trace file<input id="file" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label><label class="btn">+ Add<input id="file2" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label>
     <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D trace compare</button>
-    <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button><button id="rp" class="primary">Repeaters</button></span>
+    <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button><button id="rp" class="primary">Repeaters</button><button id="rv" title="Number the repeaters from the other end of the trace, for a trace taken from the B end">Reverse numbering</button></span>
   </div>
   <div id="err" class="err"></div>
   <div id="drop">Drop a .sor or Advantest .all file anywhere on this page</div>
@@ -112,7 +112,7 @@ h2{font-size:15px;margin:0 0 10px}
 
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'005',date:'2026-11-03'};   // increment n on every change
+const BUILD={n:'006',date:'2026-11-03'};   // increment n on every change
 $('#bld').textContent='Build '+BUILD.n+' \u00b7 '+BUILD.date;
 const C=299792458;
 let D=null,V={x0:0,x1:1,cx:null};
@@ -222,7 +222,7 @@ function finish(R,y){
 function show(R,name){
   D=R;{let a=1e9,z=-1e9;for(let i=0;i<R.y.length;i++){const v=R.y[i];if(v<a)a=v;if(v>z)z=v}const p=(z-a)*.05||1;R.y0=a-p;R.y1=z+p}$('#err').textContent='';$('#drop').hidden=true;$('#view').hidden=false;$('#detail').hidden=false;
   $('#fname').textContent=name;V={x0:0,x1:R.dx*(R.y.length-1),cx:null};
-  $('#evcard').hidden=!R.ev.length;drawMini();{const se=sigEnd();if(se<R.y.length*.6)V.x1=se*R.dx}
+  $('#evcard').hidden=!R.ev.length;drawMini();$('#rv').className=R.rev?'primary':'';{const se=sigEnd();if(se<R.y.length*.6)V.x1=se*R.dx}
   const f=R.fx,g=R.gen,s=R.sup,last=R.ev[R.ev.length-1];
   const row=(a)=>a.filter(r=>r[1]!=null&&String(r[1]).trim()!=='').map(r=>`<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('');
   $('#m1').innerHTML=row([
@@ -363,10 +363,12 @@ function rpHover(px,py){
   r.km.forEach((k,i)=>{const d=Math.abs(px-X(k));if(d<bd){bd=d;best=i}});
   RP.h=best;if(best<0){tip.hidden=true;return}
   const k=r.km[best],g=r.G[best],nx=r.km[best+1];
-  tip.innerHTML='<b>Repeater '+(best+1)+'</b> <span class="k">of '+r.km.length+'</span><br>'+k.toFixed(2)+' km'+(nx!=null?'<br>Span to next: '+(nx-k).toFixed(1)+' km':'')+(g&&g.gain!=null?'<br>Gain: '+g.gain.toFixed(1)+' dB \u00b7 '+(-g.slope).toFixed(3)+' dB/km':'');
+  const L=r.km.length,num=D.rev?L-best:best+1,nn=D.rev?num-1:num+1;   // reversed: the repeater nearest this end of the trace has the highest number
+  tip.innerHTML='<b>Repeater '+num+'</b> <span class="k">of '+L+(D.rev?' (numbered from the far end)':'')+'</span><br>'+k.toFixed(2)+' km'+(nx!=null?'<br>Span to repeater '+nn+': '+(nx-k).toFixed(1)+' km':'')+(g&&g.gain!=null?'<br>Gain: '+g.gain.toFixed(1)+' dB \u00b7 '+(-g.slope).toFixed(3)+' dB/km':'');
   tip.hidden=false;tip.style.left=Math.max(4,Math.min(px+14,$('#plot').clientWidth-tip.offsetWidth-4))+'px';tip.style.top=Math.max(4,py-tip.offsetHeight-10)+'px';
 }
 $('#rp').onclick=()=>{RP.on=!RP.on;RP.h=-1;$('#rtip').hidden=true;$('#rp').className=RP.on?'primary':'';draw()};
+$('#rv').onclick=()=>{if(!D)return;D.rev=!D.rev;$('#rv').className=D.rev?'primary':'';draw()};   // per-trace: number from the other end
 
 /* ---------- markers A/B: delta, loss rate and least-squares event loss ---------- */
 let M={on:false,a:0,b:0},LV={on:false,u:0,l:0};   // A/B distance markers; U/L level markers
@@ -483,8 +485,8 @@ function gains(R,km,end,skip){   // per repeater: input = incoming span line, ou
 function gtable(){
   const el=$('#gt'),S=S3;if(!S||!S.tab){el.innerHTML='';return}
   let h='<table><thead><tr><th rowspan="2">#</th><th rowspan="2">km</th>'+S.yl.map(l=>'<th colspan="4">'+l+'</th>').join('')+'</tr><tr>'+S.yl.map(()=>'<th>In</th><th>Out</th><th>Gain</th><th>dB/km</th>').join('')+'</tr></thead><tbody>';
-  S.km.forEach((k,r)=>{h+='<tr><td>'+(r+1)+'</td><td>'+k.toFixed(1)+'</td>'+S.tab.map(g=>{const q=g[r];return q&&q.gain!=null?'<td>'+q.inn.toFixed(1)+'</td><td>'+q.out.toFixed(1)+'</td><td><b>'+q.gain.toFixed(2)+'</b></td><td>'+q.slope.toFixed(3)+'</td>':'<td colspan="4">–</td>'}).join('')+'</tr>'});
-  el.innerHTML='<h2 style="margin:14px 0 6px">Repeater gain estimate</h2><div class="tbl" style="max-height:320px;overflow:auto">'+h+'</tbody></table></div><div class="sub" style="margin:6px 0 0">In and Out are the extrapolated span-loss lines at the repeater (dB, instrument scale). Gain = Out − In, ignoring any overshoot or reflection. dB/km is the slope of the following span.</div>';
+  S.km.forEach((k,r)=>{h+='<tr><td>'+(S.rev?S.L0-S.idx[r]:S.idx[r]+1)+'</td><td>'+k.toFixed(1)+'</td>'+S.tab.map(g=>{const q=g[r];return q&&q.gain!=null?'<td>'+q.inn.toFixed(1)+'</td><td>'+q.out.toFixed(1)+'</td><td><b>'+q.gain.toFixed(2)+'</b></td><td>'+q.slope.toFixed(3)+'</td>':'<td colspan="4">–</td>'}).join('')+'</tr>'});
+  el.innerHTML='<h2 style="margin:14px 0 6px">Repeater gain estimate'+(S.rev?' <span class="k" style="font-weight:400">(numbered from the other end, following the baseline trace)</span>':'')+'</h2><div class="tbl" style="max-height:320px;overflow:auto">'+h+'</tbody></table></div><div class="sub" style="margin:6px 0 0">In and Out are the extrapolated span-loss lines at the repeater (dB, instrument scale). Gain = Out − In, ignoring any overshoot or reflection. dB/km is the slope of the following span.</div>';
 }
 function gridKm(ts,EI,lo,hi){const xe=Math.min(...ts.map(R=>EI.get(R)*R.dx)),x1=Math.min(hi,xe),x0=Math.min(lo,x1),dxm=Math.max(...ts.map(R=>R.dx));
   if(x1-x0<=0){const e=[];e.bw=0;return e}
@@ -511,7 +513,7 @@ function surf(){
   const diff=$('#md').value==='diff';if(diff)Z=Z.map(z=>z.map((v,r)=>v-Z[bi][r]));
 
   const uniq=new Set(ts.map(R=>R.fx.wl)).size===ts.length;
-  return{ts,km,Z,diff,full,bi,gx,tab:Gf,lm:lm?[lo,hi]:null,spr:spread,ya:ts.map((R,i)=>uniq?R.fx.wl:i),yl:ts.map((R,i)=>uniq?R.fx.wl.toFixed(2)+' nm':(R.fx.dt?new Date(R.fx.dt*1000).toISOString().slice(0,10):'#'+(i+1)))};
+  return{ts,km,Z,diff,full,bi,gx,tab:Gf,rev:!!ts[bi].rev,idx:km0.map((k,r)=>r).filter(r=>ok[r]),L0:km0.length,lm:lm?[lo,hi]:null,spr:spread,ya:ts.map((R,i)=>uniq?R.fx.wl:i),yl:ts.map((R,i)=>uniq?R.fx.wl.toFixed(2)+' nm':(R.fx.dt?new Date(R.fx.dt*1000).toISOString().slice(0,10):'#'+(i+1)))};
 }
 function refresh3d(){
   if(T.length<2){S3=null;return}
