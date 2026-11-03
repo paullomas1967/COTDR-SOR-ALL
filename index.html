@@ -48,6 +48,7 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--bg)}
 .r{color:var(--refl)}.err{color:var(--refl);margin-top:8px}
 .mk{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px 18px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 .k{color:var(--muted)}
+#rtip{position:absolute;pointer-events:none;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;line-height:1.4;box-shadow:0 2px 10px rgba(0,0,0,.28);white-space:nowrap;z-index:5}
 input[type=number],select{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;max-width:260px}
 .bar label{display:inline-flex;gap:6px;align-items:center}
 label.btn{display:inline-flex}
@@ -63,7 +64,7 @@ h2{font-size:15px;margin:0 0 10px}
   <div class="bar">
     <label class="btn primary">Open trace file<input id="file" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label><label class="btn">+ Add<input id="file2" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label>
     <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D trace compare</button>
-    <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button></span>
+    <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button><button id="rp" class="primary">Repeaters</button></span>
   </div>
   <div id="err" class="err"></div>
   <div id="drop">Drop a .sor or Advantest .all file anywhere on this page</div>
@@ -75,7 +76,7 @@ h2{font-size:15px;margin:0 0 10px}
     <div id="gt"></div>
   </div>
   <div id="view" hidden>
-    <div id="plotwrap"><div id="plot"><canvas id="cv"></canvas></div><div id="ybar" title="Vertical zoom: drag to pan, drag the ends to zoom, double-click for auto"><div id="ywin" class="win"><i class="h t"></i><i class="h b"></i></div></div></div>
+    <div id="plotwrap"><div id="plot"><canvas id="cv"></canvas><div id="rtip" hidden></div></div><div id="ybar" title="Vertical zoom: drag to pan, drag the ends to zoom, double-click for auto"><div id="ywin" class="win"><i class="h t"></i><i class="h b"></i></div></div></div>
     <div id="xbar" title="Horizontal zoom: drag to pan, drag the ends to zoom, click to jump"><canvas id="mini"></canvas><div id="xwin" class="win"><i class="h l"></i><i class="h r"></i></div></div>
     <div id="read">Hover the trace for distance and level · scroll to zoom · drag to pan · double-click to fit · or use the zoom bars</div>
     <div id="lvp" hidden><div class="mk">
@@ -111,7 +112,7 @@ h2{font-size:15px;margin:0 0 10px}
 
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'004',date:'2026-11-03'};   // increment n on every change
+const BUILD={n:'005',date:'2026-11-03'};   // increment n on every change
 $('#bld').textContent='Build '+BUILD.n+' \u00b7 '+BUILD.date;
 const C=299792458;
 let D=null,V={x0:0,x1:1,cx:null};
@@ -289,6 +290,10 @@ function draw(){
   for(const e of D.ev){const px=X(e.d);if(px<m.l-10||px>m.l+pw+10)continue;
     g.strokeStyle=g.fillStyle=e.type[0]!=='0'?col('--refl'):col('--ok');g.beginPath();g.moveTo(px,m.t+14);g.lineTo(px,m.t+ph);g.stroke();g.fillText(e.n,px,m.t+10)}
   g.setLineDash([]);
+  if(RP.on){const r=getRP();g.fillStyle=col('--muted');   // repeater ticks along the top; the hovered one is highlighted
+    r.km.forEach((k,i)=>{if(k<V.x0||k>V.x1)return;const x=X(k);
+      if(i===RP.h){g.strokeStyle=col('--accent');g.lineWidth=1;g.setLineDash([3,3]);g.beginPath();g.moveTo(x,m.t);g.lineTo(x,m.t+ph);g.stroke();g.setLineDash([]);g.fillStyle=col('--accent')}
+      g.beginPath();g.moveTo(x-4,m.t);g.lineTo(x+4,m.t);g.lineTo(x,m.t+7);g.closePath();g.fill();g.fillStyle=col('--muted')})}
   if(M.on){const xa=X(M.a),xb=X(M.b),ci=k=>Math.max(0,Math.min(N-1,Math.round(k/dx)));
     g.fillStyle='rgba(128,128,128,.13)';g.fillRect(Math.min(xa,xb),m.t,Math.abs(xb-xa),ph);g.textAlign='center';g.font='bold 11px system-ui,sans-serif';
     [['A',xa,'#f57c00',M.a],['B',xb,'#8e24aa',M.b]].forEach(([n,x,c,k])=>{g.strokeStyle=g.fillStyle=c;g.lineWidth=1.5;g.beginPath();g.moveTo(x,m.t);g.lineTo(x,m.t+ph);g.stroke();
@@ -329,11 +334,12 @@ cv.addEventListener('pointermove',e=>{
     if(LV.on){const Yv=v=>V.m.t+(V.hi-v)/(V.hi-V.lo)*V.ph,py=e.clientY-view().top;if(Math.min(Math.abs(py-Yv(LV.u)),Math.abs(py-Yv(LV.l)))<8)c='ns-resize'}
     if(c==='crosshair'&&M.on){const X=k=>V.m.l+(k-V.x0)/(V.x1-V.x0)*V.pw;if(Math.min(Math.abs(px-X(M.a)),Math.abs(px-X(M.b)))<9)c='ew-resize'}
     cv.style.cursor=c}
+  rpHover(px,e.clientY-view().top);
   V.cx=px;draw();
   const x=xAt(px),i=Math.max(0,Math.min(D.y.length-1,Math.round(x/D.dx)));
   $('#read').textContent=`${x.toFixed(4)} km  ·  ${D.y[i].toFixed(2)} dB (relative)`;
 });
-cv.addEventListener('pointerleave',()=>{V.cx=null;draw()});
+cv.addEventListener('pointerleave',()=>{V.cx=null;RP.h=-1;$('#rtip').hidden=true;draw()});
 cv.addEventListener('dblclick',fit);
 function fit(){if(!D)return;V.x0=0;V.x1=D.dx*(D.y.length-1);V.y=null;draw()}
 $('#zin').onclick=()=>D&&zoom(.6);$('#zout').onclick=()=>D&&zoom(1.6);$('#zfit').onclick=fit;$('#zsig').onclick=()=>{if(D){V.x0=0;V.x1=sigEnd()*D.dx;V.y=null;draw()}};
@@ -342,6 +348,25 @@ $('#evs').addEventListener('click',e=>{
   V.x0=ev.d-s/2;V.x1=V.x0+s;clamp();draw();
 });
 new ResizeObserver(draw).observe($('#plot'));
+
+/* ---------- repeater numbers on hover ---------- */
+let RP={on:true,h:-1};
+function getRP(){   // repeaters of the trace on screen, using the detection settings from the 3D controls (cached per trace and settings)
+  const R=D,st=+$('#stp').value||4,sp=+$('#spc').value||15,sk=+$('#sk').value||4,key=st+'|'+sp+'|'+sk;
+  if(!R.rp||R.rp.key!==key){const ei=sigEnd(R),km=repeaters(R,st,sp,ei);R.rp={key,km,G:gains(R,km,ei*R.dx,sk)}}
+  return R.rp;
+}
+function rpHover(px,py){
+  const tip=$('#rtip');
+  if(!RP.on||!D||drag){tip.hidden=true;RP.h=-1;return}
+  const r=getRP(),X=k=>V.m.l+(k-V.x0)/(V.x1-V.x0)*V.pw;let best=-1,bd=9;
+  r.km.forEach((k,i)=>{const d=Math.abs(px-X(k));if(d<bd){bd=d;best=i}});
+  RP.h=best;if(best<0){tip.hidden=true;return}
+  const k=r.km[best],g=r.G[best],nx=r.km[best+1];
+  tip.innerHTML='<b>Repeater '+(best+1)+'</b> <span class="k">of '+r.km.length+'</span><br>'+k.toFixed(2)+' km'+(nx!=null?'<br>Span to next: '+(nx-k).toFixed(1)+' km':'')+(g&&g.gain!=null?'<br>Gain: '+g.gain.toFixed(1)+' dB \u00b7 '+(-g.slope).toFixed(3)+' dB/km':'');
+  tip.hidden=false;tip.style.left=Math.max(4,Math.min(px+14,$('#plot').clientWidth-tip.offsetWidth-4))+'px';tip.style.top=Math.max(4,py-tip.offsetHeight-10)+'px';
+}
+$('#rp').onclick=()=>{RP.on=!RP.on;RP.h=-1;$('#rtip').hidden=true;$('#rp').className=RP.on?'primary':'';draw()};
 
 /* ---------- markers A/B: delta, loss rate and least-squares event loss ---------- */
 let M={on:false,a:0,b:0},LV={on:false,u:0,l:0};   // A/B distance markers; U/L level markers
