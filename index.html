@@ -68,7 +68,7 @@ h2{font-size:15px;margin:0 0 10px}
   <div id="err" class="err"></div>
   <div id="drop">Drop a .sor or Advantest .all file anywhere on this page</div>
   <div id="v3" hidden>
-    <div class="bar" style="margin-top:10px"><label>Min step <input id="stp" type="number" value="4" min="1" max="30" step="0.5" style="width:64px"> dB</label><label>Min spacing <input id="spc" type="number" value="15" min="1" max="300" style="width:64px"> km</label><label>Green ≤ <input id="gl" type="number" value="1" min="0" max="30" step="0.5" style="width:56px"> dB, red ≥ <input id="rl" type="number" value="10" min="1" max="60" style="width:56px"> dB</label><label title="Set markers A and B on the Trace tab first"><input id="lm" type="checkbox"> Only between markers A–B</label><label><input id="gx" type="checkbox" checked> Gain from span-loss extrapolation</label><label>Skip after repeater <input id="sk" type="number" value="4" min="0" max="30" step="0.5" style="width:56px"> km</label><label>Data <select id="dt"><option value="full">Entire trace</option><option value="pk">Repeater peaks only</option></select></label><label>Show <select id="md"><option value="abs">Peak level</option><option value="diff">Difference vs baseline</option></select></label><label>Baseline <select id="bs"></select></label><label><input id="nrm" type="checkbox" checked> Remove each trace’s mean</label><button id="r3">Reset view</button></div>
+    <div class="bar" style="margin-top:10px"><label>Min step <input id="stp" type="number" value="4" min="1" max="30" step="0.5" style="width:64px"> dB</label><label>Min spacing <input id="spc" type="number" value="15" min="1" max="300" style="width:64px"> km</label><label>Green ≤ <input id="gl" type="number" value="1" min="0" max="30" step="0.5" style="width:56px"> dB, red ≥ <input id="rl" type="number" value="10" min="1" max="60" style="width:56px"> dB</label><label title="Set markers A and B on the Trace tab first"><input id="lm" type="checkbox"> Only between markers A–B</label><label><input id="gx" type="checkbox" checked> Gain from span-loss extrapolation</label><label title="Minimum distance skipped after each repeater; the page also always skips at least one pulse length">Skip after repeater <input id="sk" type="number" value="4" min="0" max="30" step="0.5" style="width:56px"> km</label><label>Data <select id="dt"><option value="full">Entire trace</option><option value="pk">Repeater peaks only</option></select></label><label>Show <select id="md"><option value="abs">Peak level</option><option value="diff">Difference vs baseline</option></select></label><label>Baseline <select id="bs"></select></label><label><input id="nrm" type="checkbox" checked> Remove each trace’s mean</label><button id="r3">Reset view</button></div>
     <div id="i3" class="sub" style="margin:8px 0 0"></div>
     <div style="height:480px;margin-top:4px"><canvas id="c3" style="cursor:grab;touch-action:none"></canvas></div>
     <div class="sub" style="margin:6px 0 0">Height of each repeater’s measured value, per wavelength. Drag to rotate, scroll to zoom.</div>
@@ -111,7 +111,7 @@ h2{font-size:15px;margin:0 0 10px}
 
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'002',date:'2026-11-03'};   // increment n on every change
+const BUILD={n:'003',date:'2026-11-03'};   // increment n on every change
 $('#bld').textContent='Build '+BUILD.n+' \u00b7 '+BUILD.date;
 const C=299792458;
 let D=null,V={x0:0,x1:1,cx:null};
@@ -240,12 +240,23 @@ function show(R,name){
   draw();
 }
 
-function sigEnd(R=D){if(R.sigIdx!=null)return R.sigIdx; // estimate where the backscatter/loopback signal drops into the noise floor
-  const y=R.y,N=y.length,W=Math.max(50,N>>10),nw=Math.floor(N/W),m=[];
-  for(let k=0;k<nw;k++){let s=0;for(let i=k*W;i<k*W+W;i++)s+=y[i];m.push(s/W)}
-  const t=m.slice(Math.floor(nw*.9)).sort((a,b)=>a-b),nf=t[t.length>>1],sd=t[Math.floor(t.length*.9)]-nf;
-  let last=0;for(let k=0;k<nw;k++)if(m[k]>nf+Math.max(3*sd,1))last=k;
-  return Math.min(N-1,Math.round((last+1)*W*1.05)+W)}
+function pwKm(R){const p=R.fx&&R.fx.pw&&R.fx.pw[0];return p?p*1e-9*299792458/(R.fx.ior||1.47)/2/1000:0}   // pulse length in km (also the width of a reflective-filter plateau)
+function noiseStats(R){   // contrast between the strongest parts of the trace and its (assumed signal-free) tail
+  if(R.nz)return R.nz;
+  const y=R.yd||R.y,N=y.length,B=Math.max(20,Math.round(10/R.dx)),nb=Math.floor(N/B),mxb=new Float32Array(nb);
+  for(let k=0;k<nb;k++){let m=-1e9;for(let i=k*B;i<k*B+B;i++)if(y[i]>m)m=y[i];mxb[k]=m}   // maximum in each 10 km block: ignores dropouts
+  const q=(a,p)=>{const t=Array.from(a).sort((u,v)=>u-v);return t[Math.min(t.length-1,Math.floor(t.length*p))]};
+  const nc=q(mxb.slice(Math.floor(nb*.96)),.9),top=q(mxb,.97);   // top = strongest blocks (a short signal in a long trace still counts)
+  return R.nz={B,nb,mxb,nc,top,sep:top-nc,nl:q(y.slice(Math.floor(N*.96)),.75)};   // nc = noise ceiling, nl = typical noise level
+}
+function sigEnd(R=D){   // last place where the trace clearly rises above the noise ceiling (dropouts do not matter, only the peaks)
+  if(R.sigIdx!=null)return R.sigIdx;
+  const z=noiseStats(R),N=R.y.length;
+  if(z.sep<4)return N-1;   // the tail is as strong as the rest: no usable contrast, so treat it all as signal
+  const th=z.nc+3;let last=-1;
+  for(let k=0;k<z.nb;k++){if(z.mxb[k]<=th)continue;let c=k<8?1:0;for(let j=Math.max(0,k-8);j<k;j++)if(z.mxb[j]>th)c++;if(c)last=k}   // an isolated spike far from any signal is ignored
+  return last<0?N-1:Math.min(N-1,(last+1)*z.B);
+}
 function nice(r,n){const s=Math.pow(10,Math.floor(Math.log10(r/n))),e=r/n/s;return s*(e>=5?10:e>=2?5:e>=1?2:1)}
 
 function draw(){
@@ -416,23 +427,32 @@ matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{drawMin
 
 /* ---------- several traces + 3D repeater-gain surface ---------- */
 let T=[],mode='2d',V3={az:-.9,el:.55,zoom:1},S3=null;
-function repeaters(R,step,spacing,end){            // km positions of upward level steps (repeater loop-backs)
-  const w=Math.max(2,Math.round(0.5/R.dx)),gap=Math.max(2,Math.round(spacing/R.dx)),o=[],rv=[];
+function repeaters(R,step,spacing,end){   // km positions of repeaters: a rise of at least `step` dB, then a peak consistent with neighbouring repeaters
+  const Y=R.yd||R.y,w=Math.max(2,Math.round(0.5/R.dx)),gap=Math.max(2,Math.round(spacing/R.dx)),o=[],rv=[];
   for(let i=w;i<end-w&&i+w<R.y.length;i++){const v=rise(R,i,w);if(v<=step)continue;const L=o.length-1;
     if(L<0||i-o[L]>gap){o.push(i);rv.push(v)}else if(v>rv[L]){o[L]=i;rv[L]=v}}
-  return o.map(i=>i*R.dx);
+  const pw=Math.max(10,Math.round(Math.max(3,1.5*pwKm(R))/R.dx)),pk=o.map(i=>{let m=-1e9;for(let j=i;j<Math.min(Y.length,i+pw);j++)if(Y[j]>m)m=Y[j];return m});
+  const keep=o.map((i,r)=>{const nb=[];for(let j=Math.max(0,r-4);j<=Math.min(o.length-1,r+4);j++)if(j!==r)nb.push(pk[j]);nb.sort((a,b)=>a-b);
+    return !nb.length||pk[r]>=nb[Math.floor(nb.length*.75)]-8});   // drops e.g. the recovery from a noise dropout, whose peak is far below a real repeater's
+  return o.filter((i,r)=>keep[r]).map(i=>i*R.dx);
 }
-function spanFit(R,x0,x1){   // least-squares line through one span-loss profile between x0 and x1 (km)
-  const a=Math.max(0,Math.ceil(x0/R.dx)),b=Math.min(R.y.length-1,Math.floor(x1/R.dx));if(b-a<5)return null;
-  let sx=0,sy=0,sxx=0,sxy=0;const n=b-a+1;
-  for(let i=a;i<=b;i++){const x=i*R.dx-x0,v=R.y[i];sx+=x;sy+=v;sxx+=x*x;sxy+=x*v}
+function spanFit(R,x0,x1){   // least-squares line through one span-loss profile between x0 and x1 (km); R = {y,dx,fy,cut}
+  const a=Math.max(0,Math.ceil(x0/R.dx));let b=Math.min(R.y.length-1,Math.floor(x1/R.dx));
+  if(R.cut!=null){const m=Math.max(3,Math.round(0.5/R.dx));for(let i=a;i+m<=b;i+=m){let t=0;for(let j=i;j<i+m;j++)t+=R.y[j];if(t/m<R.cut){b=i;break}}}   // stop where the span sinks into the noise
+  if((b-a)*R.dx<3)return null;
+  let sx=0,sy=0,sxx=0,sxy=0,n=0;
+  for(let i=a;i<=b;i++){const v=R.y[i];if(R.fy!=null&&v<=R.fy+0.05)continue;const x=i*R.dx-x0;sx+=x;sy+=v;sxx+=x*x;sxy+=x*v;n++}   // clipped samples are skipped
+  if(n<8)return null;
   const xm=sx/n,ym=sy/n,den=sxx-n*xm*xm,sl=den>0?(sxy-n*xm*ym)/den:0;
-  let ss=0;for(let i=a;i<=b;i++){const e=R.y[i]-(ym+sl*(i*R.dx-x0-xm));ss+=e*e}
+  let ss=0;for(let i=a;i<=b;i++){const v=R.y[i];if(R.fy!=null&&v<=R.fy+0.05)continue;const e=v-(ym+sl*(i*R.dx-x0-xm));ss+=e*e}
   return sl<-0.03&&sl>-2&&Math.sqrt(ss/n)<2.5?{sl,at:x=>ym+sl*(x-x0-xm)}:null;   // rejects noise-only or non-decaying spans
 }
-function gains(R,km,end,skip){   // per repeater: input = incoming span line, output = outgoing span line, both extrapolated to the repeater (overshoot/reflection ignored)
+function gains(R,km,end,skip){   // per repeater: input = incoming span line, output = outgoing span line, both extrapolated to the repeater (overshoot, plateau and reflection ignored)
+  const Y=R.yd||R.y,z=noiseStats(R),pwk=pwKm(R),sk=Math.max(skip,1.3*pwk),em=Math.max(1.5,0.3*pwk);   // skip at least the pulse length (the reflective-filter plateau is that wide)
+  if(R.fyd==null){let m=1e9;for(let i=0;i<Y.length;i++)if(Y[i]<m)m=Y[i];R.fyd=m}
+  const P={y:Y,dx:R.dx,fy:R.yd?null:R.fyd,cut:z.sep>=4&&!R.yd?z.nl+2:null};   // SOR: skip clipped samples and stop at the noise; .ALL (curved app scale) keeps the plain fit
   const n=km.length,d=km.slice(1).map((k,i)=>k-km[i]).sort((a,b)=>a-b),med=d.length?d[d.length>>1]:50;
-  const L=km.map((k,s)=>{const x1=Math.min(end,s<n-1?km[s+1]:k+med)-1.5,x0=k+skip;return k<end&&x1>x0?spanFit({y:R.yd||R.y,dx:R.dx},x0,x1):null});
+  const L=km.map((k,s)=>{const x1=Math.min(end,s<n-1?km[s+1]:k+med)-em,x0=k+sk;return k<end&&x1>x0?spanFit(P,x0,x1):null});
   return km.map((k,r)=>{const i=r?L[r-1]:null,o=L[r];if(!i||!o)return{};const a=i.at(k)+(R.absOff||0),b=o.at(k)+(R.absOff||0);return{inn:a,out:b,gain:b-a,slope:o.sl}});
 }
 function gtable(){
@@ -454,7 +474,7 @@ function peakAt(R,km,w,step){const n=R.y.length,a=Math.max(1,Math.round((km-w)/R
   return rm<step*.6?NaN:m+(R.absOff||0)}   // NaN when no real repeater step exists here in this trace
 function surf(){
   const st=+$('#stp').value||4,sp=+$('#spc').value||15,nrm=$('#nrm').checked;
-  const ts=T.slice().sort((a,b)=>a.fx.wl-b.fx.wl),EI=new Map(ts.map(R=>[R,sigEnd(R)]));
+  const ts=T.slice().sort((a,b)=>a.fx.wl-b.fx.wl||a.fx.dt-b.fx.dt),EI=new Map(ts.map(R=>[R,sigEnd(R)]));
   const lm=$('#lm').checked&&Math.abs(M.b-M.a)>0,lo=lm?Math.min(M.a,M.b):0,hi=lm?Math.max(M.a,M.b):Infinity;   // optional range from markers A and B
   const full=$('#dt').value==='full',ref=ts.reduce((a,b)=>EI.get(b)*b.dx>EI.get(a)*a.dx?b:a),km0=full?gridKm(ts,EI,lo,hi):repeaters(ref,st,sp,EI.get(ref));
   const gx=!full&&$('#gx').checked,sk=+$('#sk').value||4,G=gx?ts.map(R=>gains(R,km0,EI.get(R)*R.dx,sk)):null;
@@ -466,13 +486,14 @@ function surf(){
   const diff=$('#md').value==='diff';if(diff)Z=Z.map(z=>z.map((v,r)=>v-Z[bi][r]));
 
   const uniq=new Set(ts.map(R=>R.fx.wl)).size===ts.length;
-  return{ts,km,Z,diff,full,bi,gx,tab:Gf,lm:lm?[lo,hi]:null,spr:spread,ya:ts.map((R,i)=>uniq?R.fx.wl:i),yl:ts.map((R,i)=>uniq?R.fx.wl.toFixed(2)+' nm':'#'+(i+1))};
+  return{ts,km,Z,diff,full,bi,gx,tab:Gf,lm:lm?[lo,hi]:null,spr:spread,ya:ts.map((R,i)=>uniq?R.fx.wl:i),yl:ts.map((R,i)=>uniq?R.fx.wl.toFixed(2)+' nm':(R.fx.dt?new Date(R.fx.dt*1000).toISOString().slice(0,10):'#'+(i+1)))};
 }
 function refresh3d(){
   if(T.length<2){S3=null;return}
   S3=surf();const bt=S3.diff?S3.Z.map((z,t)=>{const f=z.filter(isFinite);return t===S3.bi||!f.length?null:S3.yl[t]+' − '+S3.yl[S3.bi]+': mean '+(f.reduce((s,v)=>s+v,0)/f.length).toFixed(1)+' dB ('+Math.min(...f).toFixed(1)+' to '+Math.max(...f).toFixed(1)+')'}).filter(Boolean):[];
   $('#i3').textContent=(S3.lm?'Markers A–B: '+S3.lm[0].toFixed(2)+'–'+S3.lm[1].toFixed(2)+' km · ':'')+($('#lm').checked&&!S3.lm?'Set markers A and B on the Trace tab first · ':'')+S3.km.length+(S3.full?' bins, entire trace':S3.gx?' repeaters, gain from span-loss extrapolation':' repeaters')+' \u00b7 '+S3.ts.map(R=>R.fx.wl?R.fx.wl+' nm ('+(299792.458/R.fx.wl).toFixed(2)+' THz)':R.name).join(' \u00b7 ');
   if(bt.length)$('#i3').textContent+=' · Δ '+bt.join(' · ');
+  if(!S3.full&&S3.km.length>2){const sp=S3.km.slice(1).map((k,i)=>k-S3.km[i]).sort((a,b)=>a-b);$('#i3').textContent+=' \u00b7 span median '+sp[sp.length>>1].toFixed(1)+' km (shortest '+sp[0].toFixed(1)+', longest '+sp[sp.length-1].toFixed(1)+')'}
   gtable();draw3d();
 }
 function draw3d(){
@@ -533,7 +554,7 @@ async function loadFiles(files,add){
   $('#sel').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+R.name.replace(/[<&"]/g,'')+(R.fx.wl?' ('+R.fx.wl+' nm)':'')+'</option>').join('');
   $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;$('#t2').hidden=$('#t3').hidden=T.length<2;
   const last=T[T.length-1];$('#sel').value=T.length-1;show(last,last.name);
-  const lo=T.reduce((a,R,i)=>R.fx.wl<T[a].fx.wl?i:a,0);$('#bs').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+(R.fx.wl?R.fx.wl+' nm – ':'')+R.name.replace(/[<&"]/g,'')+'</option>').join('');$('#bs').value=lo;
+  const lo=T.reduce((a,R,i)=>R.fx.wl<T[a].fx.wl||R.fx.wl===T[a].fx.wl&&R.fx.dt<T[a].fx.dt?i:a,0);$('#bs').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+(R.fx.wl?R.fx.wl+' nm – ':'')+R.name.replace(/[<&"]/g,'')+'</option>').join('');$('#bs').value=lo;
   $('#md').value=T.length===2?'diff':'abs';$('#nrm').checked=T.length!==2&&!$('#gx').checked;
   if(T.length<2)mode='2d';setMode(mode);
 }
