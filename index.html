@@ -62,7 +62,7 @@ h2{font-size:15px;margin:0 0 10px}
 <div class="card">
   <div class="bar">
     <label class="btn primary">Open trace file<input id="file" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label><label class="btn">+ Add<input id="file2" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label>
-    <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D gain</button>
+    <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D trace compare</button>
     <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button></span>
   </div>
   <div id="err" class="err"></div>
@@ -111,7 +111,7 @@ h2{font-size:15px;margin:0 0 10px}
 
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'003',date:'2026-11-03'};   // increment n on every change
+const BUILD={n:'004',date:'2026-11-03'};   // increment n on every change
 $('#bld').textContent='Build '+BUILD.n+' \u00b7 '+BUILD.date;
 const C=299792458;
 let D=null,V={x0:0,x1:1,cx:null};
