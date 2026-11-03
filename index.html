@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SOR / OTDR Trace Viewer</title>
+<title>SOR - ALL / C-OTDR Trace Viewer</title>
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--fg:#1b2430;--muted:#6a7584;--line:#dde2e8;--accent:#1565c0;--trace:#1565c0;--refl:#d84315;--ok:#2e7d32;color-scheme:light;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -56,15 +56,14 @@ h2{font-size:15px;margin:0 0 10px}
 </head>
 <body>
 <main>
-<h1>SOR / OTDR Trace Viewer</h1>
-<p class="sub">Telcordia SR-4731 (SOR v1 &amp; v2) and Advantest/Anritsu Q8492 .ALL files. Files are read locally in your browser and never uploaded.</p>
+<h1>SOR - ALL / C-OTDR Trace Viewer</h1>
+<p class="sub">Telcordia SR-4731 (SOR v1 &amp; v2) and Advantest/Anritsu Q8492 .ALL files. Files are read locally in your browser and never uploaded. <span id="bld" style="white-space:nowrap;margin-left:6px"></span></p>
 
 <div class="card">
   <div class="bar">
     <label class="btn primary">Open trace file<input id="file" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label><label class="btn">+ Add<input id="file2" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label>
-    <button id="demo">Load demo trace</button>
     <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D gain</button>
-    <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button></span>
+    <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button></span>
   </div>
   <div id="err" class="err"></div>
   <div id="drop">Drop a .sor or Advantest .all file anywhere on this page</div>
@@ -79,6 +78,12 @@ h2{font-size:15px;margin:0 0 10px}
     <div id="plotwrap"><div id="plot"><canvas id="cv"></canvas></div><div id="ybar" title="Vertical zoom: drag to pan, drag the ends to zoom, double-click for auto"><div id="ywin" class="win"><i class="h t"></i><i class="h b"></i></div></div></div>
     <div id="xbar" title="Horizontal zoom: drag to pan, drag the ends to zoom, click to jump"><canvas id="mini"></canvas><div id="xwin" class="win"><i class="h l"></i><i class="h r"></i></div></div>
     <div id="read">Hover the trace for distance and level · scroll to zoom · drag to pan · double-click to fit · or use the zoom bars</div>
+    <div id="lvp" hidden><div class="mk">
+      <div><b style="color:#2e7d32">U</b> <span id="lvu"></span></div>
+      <div><b style="color:#d81b60">L</b> <span id="lvl"></span></div>
+      <div><span class="k">Level difference (U − L)</span> <b id="lvd"></b></div>
+    </div>
+    <div class="sub" style="margin:8px 0 0">Drag the U (upper) and L (lower) lines up or down to read a level difference, for example a repeater step or the height of a feature.</div></div>
     <div id="mkp" hidden><div class="mk">
       <div><b style="color:#f57c00">A</b> <span id="mka"></span></div>
       <div><b style="color:#8e24aa">B</b> <span id="mkb"></span></div>
@@ -106,6 +111,8 @@ h2{font-size:15px;margin:0 0 10px}
 
 <script>
 const $=s=>document.querySelector(s);
+const BUILD={n:'001',date:'2026-11-03'};   // increment n on every change
+$('#bld').textContent='Build '+BUILD.n+' \u00b7 '+BUILD.date;
 const C=299792458;
 let D=null,V={x0:0,x1:1,cx:null};
 
@@ -208,21 +215,6 @@ function finish(R,y){
   return R;
 }
 
-/* ---------- demo data ---------- */
-function demo(){
-  const dx=0.008,n=3000,y=new Float32Array(n),att=0.2;let seed=7;const rnd=()=>(seed=seed*16807%2147483647)/2147483647-.5;
-  const ev=[{d:0.0,l:0,r:-45},{d:5,l:0.3,r:0},{d:12,l:0.6,r:-38},{d:20,l:0,r:-30}];
-  for(let i=0;i<n;i++){const d=i*dx;let v=28-att*d;
-    for(const e of ev){if(d>e.d&&e.d>0&&e.d<20)v-=e.l;}
-    if(d>20.05)v=-4;
-    for(const e of ev)if(Math.abs(d-e.d)<dx*1.5&&e.r!==0)v+=e.r===-30?7:4;
-    y[i]=v+rnd()*(d>20?1.2:.18+d*.02)}
-  const R={ver:'demo',gen:{cable:'DEMO-CABLE',fiber:'F001',locA:'Site A',locB:'Site B',operator:'Synthetic data'},sup:{otdr:'Demo generator'},
-    fx:{dt:Date.now()/1000,units:'km',wl:1550,pw:[100],sp:[Math.round(dx*1000*2*1.4682/C*1e11*1000*1)],np:[n],ior:1.4682,avg:15000,avgTime:30,range:0},
-    ev:ev.map((e,i)=>({n:i+1,d:e.d,loss:e.l,refl:e.r,slope:att,type:(e.r?'1F9999LS':'0F9999LS'),peak:0,comment:''})),sum:{loss:28.4-0,orl:32.1}};
-  R.dx=dx;R.y=y;R.ev[3].type='1E9999LS';return R;
-}
-
 /* ---------- UI ---------- */
 function show(R,name){
   D=R;{let a=1e9,z=-1e9;for(let i=0;i<R.y.length;i++){const v=R.y[i];if(v<a)a=v;if(v>z)z=v}const p=(z-a)*.05||1;R.y0=a-p;R.y1=z+p}$('#err').textContent='';$('#drop').hidden=true;$('#view').hidden=false;$('#detail').hidden=false;
@@ -289,6 +281,10 @@ function draw(){
     [['A',xa,'#f57c00',M.a],['B',xb,'#8e24aa',M.b]].forEach(([n,x,c,k])=>{g.strokeStyle=g.fillStyle=c;g.lineWidth=1.5;g.beginPath();g.moveTo(x,m.t);g.lineTo(x,m.t+ph);g.stroke();
       g.beginPath();g.arc(x,Y(y[ci(k)]),4,0,6.3);g.fill();g.fillRect(x-8,m.t,16,14);g.fillStyle='#fff';g.fillText(n,x,m.t+11)});
     g.font='11px system-ui,sans-serif';mkUpdate()}
+  if(LV.on){const yu=Y(LV.u),yl=Y(LV.l);g.fillStyle='rgba(128,128,128,.10)';g.fillRect(m.l,Math.min(yu,yl),pw,Math.abs(yl-yu));g.font='bold 11px system-ui,sans-serif';g.textAlign='left';
+    [['U',yu,'#2e7d32',LV.u],['L',yl,'#d81b60',LV.l]].forEach(([n,yy,c,v])=>{g.strokeStyle=g.fillStyle=c;g.lineWidth=1.5;g.setLineDash([6,3]);g.beginPath();g.moveTo(m.l,yy);g.lineTo(m.l+pw,yy);g.stroke();g.setLineDash([]);
+      const t=n+' '+v.toFixed(2)+' dB',w=g.measureText(t).width+8;g.fillRect(m.l+2,yy-16,w,15);g.fillStyle='#fff';g.fillText(t,m.l+6,yy-5)});
+    g.font='11px system-ui,sans-serif';lvUpdate()}
   if(V.cx!=null){g.strokeStyle=col('--muted');g.beginPath();g.moveTo(V.cx,m.t);g.lineTo(V.cx,m.t+ph);g.stroke()}
   g.restore();
 }
@@ -304,17 +300,22 @@ function clamp(){const full=D.dx*(D.y.length-1),s=V.x1-V.x0;if(V.x0<0){V.x0=0;V.
 
 const cv=$('#cv');let drag=null;
 cv.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY>0?1.25:.8,e.clientX-view().left)},{passive:false});
-cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);const px=e.clientX-view().left;let mk=null;
-  if(M.on&&D){const X=k=>V.m.l+(k-V.x0)/(V.x1-V.x0)*V.pw,da=Math.abs(px-X(M.a)),db=Math.abs(px-X(M.b));if(Math.min(da,db)<9)mk=da<=db?'a':'b'}
-  drag={x:e.clientX,x0:V.x0,x1:V.x1,mk,moved:false}});
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);const px=e.clientX-view().left,py=e.clientY-view().top;let mk=null,lv=null;
+  if(LV.on&&D){const Yv=v=>V.m.t+(V.hi-v)/(V.hi-V.lo)*V.ph,du=Math.abs(py-Yv(LV.u)),dl=Math.abs(py-Yv(LV.l));if(Math.min(du,dl)<8)lv=du<=dl?'u':'l'}
+  if(!lv&&M.on&&D){const X=k=>V.m.l+(k-V.x0)/(V.x1-V.x0)*V.pw,da=Math.abs(px-X(M.a)),db=Math.abs(px-X(M.b));if(Math.min(da,db)<9)mk=da<=db?'a':'b'}
+  drag={x:e.clientX,x0:V.x0,x1:V.x1,mk,lv,moved:false}});
 cv.addEventListener('pointerup',e=>{
-  if(drag&&M.on&&!drag.mk&&!drag.moved&&D){const x=snapX(xAt(e.clientX-view().left));M[Math.abs(x-M.a)<=Math.abs(x-M.b)?'a':'b']=x;draw()}   // a click moves the nearest marker
+  if(drag&&M.on&&!drag.mk&&!drag.lv&&!drag.moved&&D){const x=snapX(xAt(e.clientX-view().left));M[Math.abs(x-M.a)<=Math.abs(x-M.b)?'a':'b']=x;draw()}   // a click moves the nearest marker
   drag=null});
 cv.addEventListener('pointermove',e=>{
   if(!D)return;const px=e.clientX-view().left;
-  if(drag&&drag.mk){M[drag.mk]=snapX(xAt(px))}
+  if(drag&&drag.lv){LV[drag.lv]=V.hi-(e.clientY-view().top-V.m.t)/V.ph*(V.hi-V.lo)}
+  else if(drag&&drag.mk){M[drag.mk]=snapX(xAt(px))}
   else if(drag){if(Math.abs(e.clientX-drag.x)>3)drag.moved=true;const dxk=(e.clientX-drag.x)/V.pw*(drag.x1-drag.x0);V.x0=drag.x0-dxk;V.x1=drag.x1-dxk;clamp()}
-  if(!drag&&M.on){const X=k=>V.m.l+(k-V.x0)/(V.x1-V.x0)*V.pw;cv.style.cursor=Math.min(Math.abs(px-X(M.a)),Math.abs(px-X(M.b)))<9?'ew-resize':'crosshair'}
+  if(!drag){let c='crosshair';
+    if(LV.on){const Yv=v=>V.m.t+(V.hi-v)/(V.hi-V.lo)*V.ph,py=e.clientY-view().top;if(Math.min(Math.abs(py-Yv(LV.u)),Math.abs(py-Yv(LV.l)))<8)c='ns-resize'}
+    if(c==='crosshair'&&M.on){const X=k=>V.m.l+(k-V.x0)/(V.x1-V.x0)*V.pw;if(Math.min(Math.abs(px-X(M.a)),Math.abs(px-X(M.b)))<9)c='ew-resize'}
+    cv.style.cursor=c}
   V.cx=px;draw();
   const x=xAt(px),i=Math.max(0,Math.min(D.y.length-1,Math.round(x/D.dx)));
   $('#read').textContent=`${x.toFixed(4)} km  ·  ${D.y[i].toFixed(2)} dB (relative)`;
@@ -330,7 +331,7 @@ $('#evs').addEventListener('click',e=>{
 new ResizeObserver(draw).observe($('#plot'));
 
 /* ---------- markers A/B: delta, loss rate and least-squares event loss ---------- */
-let M={on:false,a:0,b:0};
+let M={on:false,a:0,b:0},LV={on:false,u:0,l:0};   // A/B distance markers; U/L level markers
 const snapX=x=>Math.max(0,Math.min((D.y.length-1)*D.dx,Math.round(x/D.dx)*D.dx));
 function lineFit(R,x0,x1){   // least-squares line over [x0,x1] km, no quality gate
   const a=Math.max(0,Math.ceil(x0/R.dx)),b=Math.min(R.y.length-1,Math.floor(x1/R.dx));if(b-a<2)return null;
@@ -338,6 +339,10 @@ function lineFit(R,x0,x1){   // least-squares line over [x0,x1] km, no quality g
   for(let i=a;i<=b;i++){const x=i*R.dx-x0,v=R.y[i];sx+=x;sy+=v;sxx+=x*x;sxy+=x*v}
   const xm=sx/n,ym=sy/n,den=sxx-n*xm*xm,sl=den>0?(sxy-n*xm*ym)/den:0;
   return{sl,at:x=>ym+sl*(x-x0-xm)};
+}
+function lvUpdate(){
+  const p=$('#lvp');p.hidden=!LV.on||!D;if(p.hidden)return;
+  const d=LV.u-LV.l;$('#lvu').textContent=LV.u.toFixed(2)+' dB';$('#lvl').textContent=LV.l.toFixed(2)+' dB';$('#lvd').textContent=(d>0?'+':'')+d.toFixed(2)+' dB';
 }
 function mkUpdate(){
   const p=$('#mkp');p.hidden=!M.on||!D;if(p.hidden)return;
@@ -355,6 +360,7 @@ function mkUpdate(){
 }
 $('#mk').onclick=()=>{M.on=!M.on;$('#mk').className=M.on?'primary':'';if(M.on&&D){const w=V.x1-V.x0;M.a=snapX(V.x0+w/3);M.b=snapX(V.x0+2*w/3)}draw();mkUpdate()};
 $('#mw').addEventListener('input',mkUpdate);
+$('#lv').onclick=()=>{LV.on=!LV.on;$('#lv').className=LV.on?'primary':'';if(LV.on&&D){const r=V.hi-V.lo;LV.u=V.hi-r/3;LV.l=V.hi-2*r/3}draw();lvUpdate()};
 
 /* ---------- zoom bars: x overview + y range ---------- */
 function syncBars(){
@@ -493,6 +499,12 @@ function draw3d(){
   const dense=km.length>200;for(const q of Q){path(q.p,1);g.fillStyle=cm(q.u);g.fill();if(dense)g.strokeStyle=g.fillStyle;g.stroke()}
   g.strokeStyle=col('--fg');g.lineWidth=1.3;
   ts.forEach((R,t)=>{let on=false;g.beginPath();km.forEach((k,r)=>{const v=Z[t][r];if(!isFinite(v)){on=false;return}const p=P(nx(k),ny(ya[t]),nz(v));g[on?'lineTo':'moveTo'](p[0],p[1]);on=true});g.stroke()});
+  if(M.on&&Math.abs(M.b-M.a)>0&&!S3.lm){   // markers A and B drawn as vertical planes when the plot is not limited to them
+    [['A',M.a,'#f57c00'],['B',M.b,'#8e24aa']].forEach(([n,k,c])=>{
+      if(k<x0||k>x1)return;const X0=nx(k),q=[P(X0,-1,-1),P(X0,1,-1),P(X0,1,1),P(X0,-1,1)];
+      g.globalAlpha=.16;g.fillStyle=c;path(q,1);g.fill();g.globalAlpha=1;g.strokeStyle=c;g.lineWidth=1.5;path(q,1);g.stroke();
+      g.font='bold 11px system-ui,sans-serif';const lab=n+' '+k.toFixed(1)+' km',w=g.measureText(lab).width+10,mx=(q[2][0]+q[3][0])/2,my=(q[2][1]+q[3][1])/2;
+      g.fillStyle=c;g.fillRect(mx-w/2,my-17,w,15);g.fillStyle='#fff';g.textAlign='center';g.fillText(lab,mx,my-6);g.font='11px system-ui,sans-serif'})}
   g.fillStyle=col('--muted');g.textAlign='center';
   const ey=P(0,-1,-1)[1]>P(0,1,-1)[1]?-1:1,ex=P(-1,0,-1)[1]>P(1,0,-1)[1]?-1:1;
   for(let i=0;i<=4;i++){const v=x0+(x1-x0)*i/4,p=P(nx(v),ey,-1);g.fillText(v.toFixed(0),p[0],p[1]+14)}
@@ -543,7 +555,6 @@ async function loadFile(f){
 }
 $('#file').onchange=e=>{loadFiles(e.target.files,false);e.target.value=''};
 $('#file2').onchange=e=>{loadFiles(e.target.files,true);e.target.value=''};
-$('#demo').onclick=()=>{T=[];$('#sel').hidden=true;$('#fname').hidden=false;$('#t2').hidden=$('#t3').hidden=true;mode='2d';show(demo(),'Demo trace (synthetic)');setMode('2d')};
 addEventListener('dragover',e=>{e.preventDefault();document.body.classList.add('drag')});
 addEventListener('dragleave',()=>document.body.classList.remove('drag'));
 addEventListener('drop',e=>{e.preventDefault();document.body.classList.remove('drag');loadFiles(e.dataTransfer.files,e.shiftKey)});
