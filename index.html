@@ -111,7 +111,7 @@ h2{font-size:15px;margin:0 0 10px}
 
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'001',date:'2026-11-03'};   // increment n on every change
+const BUILD={n:'002',date:'2026-11-03'};   // increment n on every change
 $('#bld').textContent='Build '+BUILD.n+' \u00b7 '+BUILD.date;
 const C=299792458;
 let D=null,V={x0:0,x1:1,cx:null};
@@ -191,10 +191,12 @@ function parseALL(buf){
   for(let i=0;i<N;i++){const v=dv.getInt32(off+4*i);A[i]=v;if(v>mx)mx=v}
   const dd=[];for(let i=1;i<N;i+=3)dd.push(Math.abs(A[i]-A[i-1]));dd.sort((a,b)=>a-b);
   const fl=Math.max(2.5*dd[dd.length>>1]/0.954,mx*1e-4);       // noise floor: clamp negatives / noise before log
-  const REF=7822500,FL=285.9;   // 0 dB reference and display floor, in counts, calibrated to the instrument app (Max -4.919 dB, Min -44.372 dB)
-  const y=new Float32Array(N);let ymx=-1e9,ymn=1e9;for(let i=0;i<N;i++){const v=10*Math.log10(Math.max(A[i],FL)/REF);y[i]=v;if(v>ymx)ymx=v;if(v<ymn)ymn=v}
-  const yd=new Float32Array(N),fd=Math.max(fl,FL);for(let i=0;i<N;i++)yd[i]=10*Math.log10(Math.max(A[i],fd)/REF);   // noise-clamped copy used for repeater detection and gain fits
-  let se=N-1;{const yf=10*Math.log10(Math.max(fl,FL)/REF)+4;while(se>0&&y[se]<=yf)se--}   // last sample clearly above the noise floor
+  const navg=parseInt(kv['AVERAGE No.'])||parseInt(asc(0x60,0x70))||1,K=navg*navg*4294967296;   // instrument-app scale (decoded from COTDR_pc.exe): level = 2.5*ln(A*B/(N^2*2^32)), N = number of averages
+  const B=new Float64Array(N),hasB=u8.length>=off+8*N;for(let i=0;i<N;i++)B[i]=hasB?dv.getInt32(off+4*N+4*i):A[i];   // second record
+  const lev=(a,b)=>2.5*Math.log(Math.max(a,1)*Math.max(b,1)/K);   // zero and negative values are clamped to 1 count, as in the app (this gives its -44.4 dB floor)
+  const y=new Float32Array(N);let ymx=-1e9,ymn=1e9;for(let i=0;i<N;i++){const v=lev(A[i],B[i]);y[i]=v;if(v>ymx)ymx=v;if(v<ymn)ymn=v}
+  const yd=new Float32Array(N),fd=Math.max(fl,1);for(let i=0;i<N;i++)yd[i]=lev(Math.max(A[i],fd),B[i]);   // noise-clamped copy used for repeater detection and gain fits
+  let se=N-1;while(se>0&&A[se]<=2.5*fd)se--;   // last sample clearly above the noise floor
   const tr=Math.floor((u8.length-off)/(4*N)),off2=tr>1?dv.getInt32(off+4*N)-dv.getInt32(off):null;
   const gm=/GAIN\s*(\d+)/.exec(txt),cm=/CH:(\d+)/.exec(txt);
   return{ver:'Advantest ALL',gen:{cable:lab['Cable#'],fiber:lab['Fiber#'],locA:lab.Near,locB:lab.Far,operator:lab.Operator,comments:note},
@@ -202,7 +204,7 @@ function parseALL(buf){
     ev:[],sum:{},dx,y,yd,sigIdx:Math.min(N-1,se+30),absOff:0,
     extra:[['Mode',parts[0]],['Title',parts[1]],['Distance range',kv.DR],['Laser mode',kv.OPTmode],['Gain',gm&&gm[1]],['Filter',kv.FILTER],['Channel',cm&&cm[1]],
       ['Direction',lab.Direction],['CO# / Floor# / Rack#',[lab['CO#'],lab['Floor#'],lab['Rack#']].filter(Boolean).join(' / ')],['Comment',kv.Comment],
-      ['Records in file',tr+(off2!=null?` (2nd = 1st + ${off2.toLocaleString()})`:'')],['Max / Min level',ymx.toFixed(3)+' / '+ymn.toFixed(3)+' dB'],['Pulse resolution',pw?(pw/1000*0.299792458/ior/2).toFixed(2)+' km':''],['Level scale','dB re 7.82e6 counts (matches the instrument app), floor −44.4 dB']]};
+      ['Records in file',tr+(off2!=null?` (2nd = 1st + ${off2.toLocaleString()})`:'')],['Max / Min level',ymx.toFixed(3)+' / '+ymn.toFixed(3)+' dB'],['Pulse resolution',pw?(pw/1000*0.299792458/ior/2).toFixed(2)+' km':''],['Level scale','Instrument-app scale: 2.5·ln(A·B / (N²·2³²)), N = '+navg+' averages']]};
 }
 
 function finish(R,y){
