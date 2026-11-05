@@ -63,7 +63,7 @@ h2{font-size:15px;margin:0 0 10px}
 <div class="card">
   <div class="bar">
     <label class="btn primary">Open trace file<input id="file" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label><label class="btn">+ Add<input id="file2" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label>
-    <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D trace compare</button>
+    <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="rm" hidden title="Remove the trace on screen from the page (the file itself is not touched)">Remove trace</button><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D trace compare</button>
     <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button><button id="rp" class="primary">Repeaters</button><button id="rv" title="Number the repeaters from the other end of the trace, for a trace taken from the B end">Reverse numbering</button></span>
   </div>
   <div id="err" class="err"></div>
@@ -112,7 +112,7 @@ h2{font-size:15px;margin:0 0 10px}
 
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'008',date:'2026-11-04'};   // increment n on every change
+const BUILD={n:'009',date:'2026-11-05'};   // increment n on every change
 $('#bld').textContent='Build '+BUILD.n+' \u00b7 '+BUILD.date;
 const C=299792458;
 let D=null,V={x0:0,x1:1,cx:null};
@@ -602,13 +602,33 @@ async function loadFiles(files,add){
     try{const R=parseAny(await f.arrayBuffer());R.name=f.name;out.push(R)}catch(e){$('#err').textContent+='Could not read '+f.name+': '+e.message+'  '}}
   if(!out.length)return;T=out;
   $('#sel').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+R.name.replace(/[<&"]/g,'')+(R.fx.wl?' ('+R.fx.wl+' nm)':'')+'</option>').join('');
-  $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;$('#t2').hidden=$('#t3').hidden=T.length<2;
+  $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;$('#t2').hidden=$('#t3').hidden=T.length<2;$('#rm').hidden=false;
   const last=T[T.length-1];$('#sel').value=T.length-1;show(last,last.name);
   const lo=T.reduce((a,R,i)=>R.fx.wl<T[a].fx.wl||R.fx.wl===T[a].fx.wl&&R.fx.dt<T[a].fx.dt?i:a,0);$('#bs').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+(R.fx.wl?R.fx.wl+' nm – ':'')+R.name.replace(/[<&"]/g,'')+'</option>').join('');$('#bs').value=lo;
   $('#md').value=T.length===2?'diff':'abs';$('#nrm').checked=T.length!==2&&!$('#gx').checked;
   if(T.length<2)mode='2d';setMode(mode);
 }
 $('#sel').onchange=e=>{const R=T[+e.target.value];show(R,R.name);setMode(mode)};
+function fillLists(){   // rebuild the trace selector and the baseline list; returns the default baseline (lowest wavelength, then oldest)
+  const nm=R=>R.name.replace(/[<&"]/g,'');
+  $('#sel').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+nm(R)+(R.fx.wl?' ('+R.fx.wl+' nm)':'')+'</option>').join('');
+  $('#bs').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+(R.fx.wl?R.fx.wl+' nm \u2013 ':'')+nm(R)+'</option>').join('');
+  return T.reduce((a,R,i)=>R.fx.wl<T[a].fx.wl||R.fx.wl===T[a].fx.wl&&R.fx.dt<T[a].fx.dt?i:a,0);
+}
+function removeTrace(){   // take the trace on screen out of the session
+  if(!D)return;const i=T.indexOf(D);if(i<0)return;
+  const base=T[+$('#bs').value];   // keep the same baseline trace if it is still loaded
+  T.splice(i,1);S3=null;$('#rtip').hidden=true;RP.h=-1;
+  if(!T.length){   // nothing left: back to the empty start screen
+    D=null;mode='2d';V={x0:0,x1:1,cx:null};
+    ['#view','#detail','#v3','#sel','#t2','#t3','#rm'].forEach(s=>$(s).hidden=true);
+    $('#drop').hidden=false;$('#fname').hidden=false;$('#fname').textContent='No file loaded';$('#err').textContent='';return}
+  const k=Math.min(i,T.length-1),lo=fillLists(),bi=T.indexOf(base);
+  $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;$('#t2').hidden=$('#t3').hidden=T.length<2;$('#sel').value=k;$('#bs').value=bi>=0?bi:lo;
+  if(T.length<2)mode='2d';
+  show(T[k],T[k].name);setMode(mode);
+}
+$('#rm').onclick=removeTrace;
 $('#t2').onclick=()=>setMode('2d');$('#t3').onclick=()=>setMode('3d');
 ['stp','spc','nrm','md','dt','gl','rl','bs','sk','lm','inf'].forEach(id=>$('#'+id).addEventListener('input',refresh3d));
 $('#md').addEventListener('change',()=>{$('#nrm').checked=$('#md').value!=='diff'&&!$('#gx').checked;refresh3d()});
