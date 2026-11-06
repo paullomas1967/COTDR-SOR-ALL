@@ -49,6 +49,11 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--bg)}
 .mk{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px 18px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 .k{color:var(--muted)}
 .flag td{background:rgba(216,67,21,.18)}
+.sgy{position:absolute;right:2px;width:16px;background:var(--bg);border:1px solid var(--line);border-radius:4px;touch-action:none}
+.sgy .win{left:0;right:0;min-height:14px}.sgy .win .h{left:0;right:0;height:7px;cursor:ns-resize}.sgy .win .h.t{top:-1px}.sgy .win .h.b{bottom:-1px}
+#sgx{position:relative;height:40px;margin:6px 34px 0 60px;background:var(--bg);border:1px solid var(--line);border-radius:4px;touch-action:none}
+#sgx canvas{cursor:default;border-radius:4px}
+#sgxw{top:0;bottom:0;min-width:14px}#sgxw .h{top:0;bottom:0;width:7px;cursor:ew-resize}#sgxw .h.l{left:-1px}#sgxw .h.r{right:-1px}
 #rtip,#sgtip{position:absolute;pointer-events:none;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;line-height:1.4;box-shadow:0 2px 10px rgba(0,0,0,.28);white-space:nowrap;z-index:5}
 input[type=number],select{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;max-width:260px}
 .bar label{display:inline-flex;gap:6px;align-items:center}
@@ -74,11 +79,15 @@ h2{font-size:15px;margin:0 0 10px}
       <label>Measure <select id="sm"><option value="auto">Auto</option><option value="plateau">Filter plateau (HLLB reflection)</option><option value="out">Output level after repeater</option></select></label>
       <label>Show <select id="sw"><option value="abs">Absolute</option><option value="chg">Change from baseline</option></select></label>
       <label>Baseline <select id="sbs"></select></label>
+      <label title="Set markers A and B on the Trace tab first. Only the repeaters between them are shown, which removes noisy stretches."><input id="slm" type="checkbox"> Only between markers A–B</label>
       <label title="The Rayleigh level scales with pulse width; this removes the difference between traces. The filter plateau does not depend on pulse width."><input id="spw" type="checkbox" checked> Normalise for pulse width</label>
-      <label>Flag changes over <input id="sth" type="number" value="0.5" min="0.1" step="0.1" style="width:60px"> dB</label>
+      <label>Flag changes relative to baseline over <input id="sth" type="number" value="0.5" min="0.1" step="0.1" style="width:60px"> dB</label>
     </div>
     <div id="i4" class="sub" style="margin:8px 0 0"></div>
-    <div style="position:relative;height:560px;margin-top:4px"><canvas id="sgc" style="cursor:crosshair"></canvas><div id="sgtip" hidden></div></div>
+    <div style="position:relative;height:540px;margin-top:4px"><canvas id="sgc" style="cursor:crosshair"></canvas><div id="sgtip" hidden></div>
+      <div id="sgy1" class="sgy" hidden title="Vertical zoom: drag to pan, drag the ends to zoom, double-click for auto"><div class="win" id="sgy1w"><i class="h t"></i><i class="h b"></i></div></div>
+      <div id="sgy2" class="sgy" hidden title="Vertical zoom: drag to pan, drag the ends to zoom, double-click for auto"><div class="win" id="sgy2w"><i class="h t"></i><i class="h b"></i></div></div></div>
+    <div id="sgx" title="Horizontal zoom: drag to pan, drag the ends to zoom, click to jump"><canvas id="sgmini"></canvas><div class="win" id="sgxw"><i class="h l"></i><i class="h r"></i></div></div>
     <div id="sgt"></div>
     <div class="sub" style="margin:8px 0 0">Repeaters are found with the detection settings on the 3D trace compare tab (Min step, Min spacing, Skip, Infer hidden repeaters). Compare traces taken from the same end; the numbering follows the baseline trace (use Reverse numbering for a trace taken from the B end).</div>
   </div>
@@ -126,7 +135,7 @@ h2{font-size:15px;margin:0 0 10px}
 
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'010',date:'2026-11-05'};   // increment n on every change
+const BUILD={n:'011',date:'2026-11-05'};   // increment n on every change
 $('#bld').textContent='Build '+BUILD.n+' \u00b7 '+BUILD.date;
 const C=299792458;
 let D=null,V={x0:0,x1:1,cx:null};
@@ -605,7 +614,7 @@ function draw3d(){
   g.textAlign='left';g.fillText('Colour = difference from baseline ('+yl[bi]+')',bx+bw+10,by+9);g.fillText('Height = '+(S3.diff?(S3.gx?'gain difference vs ':'difference vs ')+yl[bi]:S3.gx?($('#nrm').checked?'gain vs trace mean':'repeater gain step'):$('#nrm').checked?'level vs trace mean':'level (absolute)')+' (dB)',bx,by+38);
 }
 /* ---------- loop gain signature (LME style): loop gain and differential loop gain per repeater ---------- */
-let SG=null,SGraw=null,SGkey='',SGh=-1;
+let SG=null,SGraw=null,SGkey='',SGh=-1,SGx=null,SGy=[null,null],SGvk='';   // SGx = visible repeater range, SGy = manual vertical ranges (null = auto)
 const SGCOL=['#4fc3f7','#ffb74d','#81c784','#ba68c8','#e57373','#90a4ae','#f06292','#aed581'];
 const sgName=R=>{const d=R.fx.dt?new Date(R.fx.dt*1000).toISOString().slice(0,10):'';return R.name.replace(/\.[^.]+$/,'').slice(0,26)+(d?' ('+d+')':'')};
 function sigCompute(){   // per trace and repeater: the filter plateau level and the output level (extrapolated span line); cached until the traces or detection settings change
@@ -624,17 +633,22 @@ function sigCompute(){   // per trace and repeater: the filter plateau level and
 }
 function sigRender(){
   if(!SGraw)return;
-  const {ts,km,P,O,hasPl}=SGraw,n=km.length,chg=$('#sw').value==='chg',thr=+$('#sth').value||0.5,usePw=$('#spw').checked;
+  const {ts,km,P,O,hasPl}=SGraw,nF=km.length,chg=$('#sw').value==='chg',thr=+$('#sth').value||0.5,usePw=$('#spw').checked;
   const bi=Math.max(0,ts.indexOf(T[+$('#sbs').value])),use=$('#sm').value==='auto'?(hasPl[bi]?'plateau':'out'):$('#sm').value,pwb=ts[bi].fx.pw&&ts[bi].fx.pw[0];
   const LG=ts.map((R,t)=>{const adj=use==='out'&&usePw&&pwb&&R.fx.pw&&R.fx.pw[0]?10*Math.log10(pwb/R.fx.pw[0]):0;return(use==='plateau'?P[t]:O[t]).map(v=>v+adj)});
-  const DLG=LG.map(a=>a.map((v,r)=>r&&isFinite(v)&&isFinite(a[r-1])?v-a[r-1]:NaN));   // differential loop gain = this repeater minus the previous one
-  const s1=chg?LG.map(a=>a.map((v,r)=>v-LG[bi][r])):LG,s2=chg?DLG.map(a=>a.map((v,r)=>v-DLG[bi][r])):DLG,rev=!!ts[bi].rev;
-  SG={ts,km,fl:km.fl,n,chg,thr,bi,rev,use,s1,s2,lab:r=>rev?n-r:r+1,names:ts.map(sgName)};
+  const DLG=LG.map(a=>a.map((v,r)=>r&&isFinite(v)&&isFinite(a[r-1])?v-a[r-1]:NaN));   // differential loop gain = this repeater minus the previous one (worked out on the full list)
+  const F1=chg?LG.map(a=>a.map((v,r)=>v-LG[bi][r])):LG,F2=chg?DLG.map(a=>a.map((v,r)=>v-DLG[bi][r])):DLG,rev=!!ts[bi].rev;
+  const lm=$('#slm').checked&&Math.abs(M.b-M.a)>0,lo=Math.min(M.a,M.b),hi=Math.max(M.a,M.b),sel=[];   // optional range from markers A and B
+  for(let r=0;r<nF;r++)if(!lm||(km[r]>=lo&&km[r]<=hi))sel.push(r);
+  const pick=A=>A.map(a=>sel.map(r=>a[r])),vk=[chg,use,usePw,bi,lm,lo,hi].join('|');
+  if(SGvk!==vk){SGvk=vk;SGx=null;SGy=[null,null]}   // a different view: start from the full range again
+  const n=sel.length;if(SGx&&SGx.b>n-1)SGx=null;
+  SG={ts,km:sel.map(r=>km[r]),fl:km.fl?sel.map(r=>km.fl[r]):null,n,chg,thr,bi,rev,use,s1:pick(F1),s2:pick(F2),lab:r=>rev?nF-sel[r]:sel[r]+1,names:ts.map(sgName)};   // numbers stay those of the full list
   const warn=[];
   if(use==='plateau')ts.forEach((R,t)=>{if(!hasPl[t])warn.push(sgName(R)+' has no filter plateau, so its values are not comparable')});
   if(use==='out'&&usePw&&ts.some(R=>R.fx.pw&&pwb&&Math.abs(R.fx.pw[0]/pwb-1)>.05))warn.push('levels normalised for pulse width');
   if(new Set(ts.map(R=>!!R.rev)).size>1)warn.push('traces are from different ends: numbering follows the baseline, distances are not mirrored');
-  $('#i4').textContent=n+' repeaters \u00b7 measure: '+(use==='plateau'?'filter plateau (HLLB reflection)':'output level after the repeater')+' \u00b7 baseline: '+sgName(ts[bi])+(rev?' \u00b7 numbered from the far end':'')+(warn.length?' \u00b7 '+warn.join(' \u00b7 '):'');
+  $('#i4').textContent=n+' repeaters'+(lm?' (markers A\u2013B, '+lo.toFixed(1)+'\u2013'+hi.toFixed(1)+' km)':'')+($('#slm').checked&&!lm?' \u00b7 set markers A and B on the Trace tab first':'')+' \u00b7 measure: '+(use==='plateau'?'filter plateau (HLLB reflection)':'output level after the repeater')+' \u00b7 baseline: '+sgName(ts[bi])+(rev?' \u00b7 numbered from the far end':'')+(warn.length?' \u00b7 '+warn.join(' \u00b7 '):'');
   sigTable();drawSig();
 }
 function sigTable(){
@@ -647,38 +661,74 @@ function sigTable(){
 function drawSig(){
   const c=$('#sgc'),b=c.getBoundingClientRect(),dpr=devicePixelRatio||1;c.width=b.width*dpr;c.height=b.height*dpr;
   const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.font='11px system-ui,sans-serif';
-  const cs=getComputedStyle(document.documentElement),col=k=>cs.getPropertyValue(k).trim();
-  if(!SG||SG.n<2){g.fillStyle=col('--muted');g.fillText('Need at least two repeaters. Lower Min step on the 3D trace compare tab if none are found.',16,28);return}
-  const S=SG,W=b.width,H=b.height,m={l:60,r:18,t:30,b:30},gap=46,ph=(H-m.t-m.b-gap)/2,pw=W-m.l-m.r,X=r=>m.l+r/(S.n-1)*pw;S.m={l:m.l,pw};
+  const cs=getComputedStyle(document.documentElement),col=k=>cs.getPropertyValue(k).trim(),S=SG;
+  $('#sgy1').hidden=$('#sgy2').hidden=!S||S.n<2;
+  if(!S||S.n<2){g.fillStyle=col('--muted');g.fillText('Need at least two repeaters in range. Lower Min step on the 3D trace compare tab, or widen the marker range.',16,28);return}
+  const W=b.width,H=b.height,m={l:60,r:34,t:30,b:30},gap=46,ph=(H-m.t-m.b-gap)/2,pw=W-m.l-m.r,full=S.n-1,xa=SGx?SGx.a:0,xb=SGx?SGx.b:full,X=r=>m.l+(r-xa)/(xb-xa)*pw;
+  S.m={l:m.l,pw,a:xa,b:xb};S.geo=[];
   let lx=m.l;g.textAlign='left';S.ts.forEach((R,t)=>{g.fillStyle=SGCOL[t%8];g.fillRect(lx,9,14,4);g.fillStyle=col('--fg');const tx=S.names[t]+(t===S.bi?' (baseline)':'');g.fillText(tx,lx+19,14);lx+=g.measureText(tx).width+38});
+  const r0=Math.max(0,Math.floor(xa)-1),r1=Math.min(full,Math.ceil(xb)+1),cl=v=>Math.max(0,Math.min(100,v));
   [[m.t,S.s1,S.chg?'Change in loop gain (dB)':'Loop gain (dB)',0],[m.t+ph+gap,S.s2,S.chg?'Change in differential loop gain (dB)':'Differential loop gain (dB)',1]].forEach(([y0,A,title,pi])=>{
-    let lo=1e9,hi=-1e9;A.forEach(a=>a.forEach(v=>{if(isFinite(v)){if(v<lo)lo=v;if(v>hi)hi=v}}));if(S.chg||pi===1){lo=Math.min(lo,0);hi=Math.max(hi,0)}
-    if(!(hi>lo)){lo=0;hi=1}const pad=(hi-lo)*.08;lo-=pad;hi+=pad;const Y=v=>y0+(hi-v)/(hi-lo)*ph,sy=nice(hi-lo,5);
+    let flo=1e9,fhi=-1e9,vlo=1e9,vhi=-1e9;
+    A.forEach(a=>a.forEach((v,r)=>{if(!isFinite(v))return;if(v<flo)flo=v;if(v>fhi)fhi=v;if(r>=xa-.5&&r<=xb+.5){if(v<vlo)vlo=v;if(v>vhi)vhi=v}}));
+    if(S.chg||pi===1){flo=Math.min(flo,0);fhi=Math.max(fhi,0);vlo=Math.min(vlo,0);vhi=Math.max(vhi,0)}
+    if(!(fhi>flo)){flo=0;fhi=1}if(!(vhi>vlo)){vlo=flo;vhi=fhi}
+    {const pf=(fhi-flo)*.08;flo-=pf;fhi+=pf}   // padded full range (drives the zoom bar)
+    let lo=vlo-(vhi-vlo)*.08,hi=vhi+(vhi-vlo)*.08;if(SGy[pi]){lo=SGy[pi][0];hi=SGy[pi][1]}   // visible range: auto-fit to what is on screen, or the manual one
+    const Y=v=>y0+(hi-v)/(hi-lo)*ph,sy=nice(hi-lo,5);S.geo[pi]={lo,hi,flo,fhi};
     g.strokeStyle=col('--line');g.lineWidth=1;g.fillStyle=col('--muted');g.textAlign='right';
     for(let v=Math.ceil(lo/sy)*sy;v<=hi;v+=sy){const py=Math.round(Y(v))+.5;g.beginPath();g.moveTo(m.l,py);g.lineTo(m.l+pw,py);g.stroke();g.fillText(+v.toFixed(2),m.l-6,py+4)}
     g.save();g.translate(13,y0+ph/2);g.rotate(-Math.PI/2);g.textAlign='center';g.fillText(title,0,0);g.restore();
     if(lo<0&&hi>0){g.strokeStyle=col('--muted');g.setLineDash([4,3]);g.beginPath();g.moveTo(m.l,Y(0));g.lineTo(m.l+pw,Y(0));g.stroke();g.setLineDash([])}
-    const st=Math.max(1,Math.ceil(S.n/22));g.textAlign='center';g.fillStyle=col('--muted');
-    for(let r=0;r<S.n;r+=st)g.fillText(S.lab(r),X(r),y0+ph+15);
+    const st=Math.max(1,Math.ceil((xb-xa+1)/22));g.textAlign='center';g.fillStyle=col('--muted');
+    for(let r=Math.ceil(xa/st)*st;r<=xb;r+=st)g.fillText(S.lab(r),X(r),y0+ph+15);
     g.textAlign='right';g.fillText(S.rev?'T2':'T1',m.l-8,y0+ph+15);g.textAlign='left';g.fillText(S.rev?'T1':'T2',m.l+pw+4,y0+ph+15);
+    g.save();g.beginPath();g.rect(m.l,y0-4,pw,ph+8);g.clip();
     S.ts.forEach((R,t)=>{const a=A[t];g.strokeStyle=g.fillStyle=SGCOL[t%8];g.lineWidth=t===S.bi?2.4:1.4;g.beginPath();let on=false;
-      a.forEach((v,r)=>{if(!isFinite(v)){on=false;return}g[on?'lineTo':'moveTo'](X(r),Y(v));on=true});g.stroke();
-      if(S.n<=140)a.forEach((v,r)=>{if(!isFinite(v))return;g.beginPath();g.arc(X(r),Y(v),t===S.bi?2.8:2.2,0,6.3);g.fill()});
-      if(S.chg&&pi===1&&t!==S.bi)a.forEach((v,r)=>{if(isFinite(v)&&Math.abs(v)>S.thr){g.strokeStyle='#d84315';g.lineWidth=1.6;g.beginPath();g.arc(X(r),Y(v),6,0,6.3);g.stroke()}})});   // flagged changes ringed in red
-    if(SGh>=0){g.strokeStyle=col('--accent');g.lineWidth=1;g.setLineDash([3,3]);g.beginPath();g.moveTo(X(SGh),y0);g.lineTo(X(SGh),y0+ph);g.stroke();g.setLineDash([])}
+      for(let r=r0;r<=r1;r++){const v=a[r];if(!isFinite(v)){on=false;continue}g[on?'lineTo':'moveTo'](X(r),Y(v));on=true}g.stroke();
+      if(xb-xa<=140)for(let r=r0;r<=r1;r++){const v=a[r];if(!isFinite(v))continue;g.beginPath();g.arc(X(r),Y(v),t===S.bi?2.8:2.2,0,6.3);g.fill()}
+      if(S.chg&&pi===1&&t!==S.bi)for(let r=r0;r<=r1;r++){const v=a[r];if(isFinite(v)&&Math.abs(v)>S.thr){g.strokeStyle='#d84315';g.lineWidth=1.6;g.beginPath();g.arc(X(r),Y(v),6,0,6.3);g.stroke()}}});   // flagged changes ringed in red
+    if(SGh>=r0&&SGh<=r1){g.strokeStyle=col('--accent');g.lineWidth=1;g.setLineDash([3,3]);g.beginPath();g.moveTo(X(SGh),y0);g.lineTo(X(SGh),y0+ph);g.stroke();g.setLineDash([])}
+    g.restore();
+    const bar=$('#sgy'+(pi+1)),w=$('#sgy'+(pi+1)+'w').style,sp=fhi-flo;bar.style.top=y0+'px';bar.style.height=ph+'px';
+    w.top=cl((fhi-hi)/sp*100)+'%';w.height=Math.max(0,cl((fhi-lo)/sp*100)-cl((fhi-hi)/sp*100))+'%';   // zoom bar windows
   });
+  const xw=$('#sgxw').style;xw.left=(xa/full*100)+'%';xw.width=((xb-xa)/full*100)+'%';
+  const mc=$('#sgmini'),mb=mc.getBoundingClientRect();mc.width=mb.width*dpr;mc.height=mb.height*dpr;const mg=mc.getContext('2d');mg.setTransform(dpr,0,0,dpr,0,0);   // overview strip
+  const G0=S.geo[0];S.ts.forEach((R,t)=>{mg.strokeStyle=SGCOL[t%8];mg.lineWidth=1;mg.beginPath();let on=false;S.s1[t].forEach((v,r)=>{if(!isFinite(v)){on=false;return}const x=r/full*mb.width,y=(G0.fhi-v)/(G0.fhi-G0.flo)*mb.height;mg[on?'lineTo':'moveTo'](x,y);on=true});mg.stroke()});
 }
 function refreshSig(){if(!T.length)return;sigCompute();sigRender()}
 function tabsUI(){$('#t2').hidden=$('#t4').hidden=!T.length;$('#t3').hidden=T.length<2}
-['sm','sw','sbs','spw','sth'].forEach(id=>$('#'+id).addEventListener('input',sigRender));
+['sm','sw','sbs','spw','sth','slm'].forEach(id=>$('#'+id).addEventListener('input',sigRender));
 {const c=$('#sgc'),fm=v=>isFinite(v)?v.toFixed(2):'\u2013';
-  c.addEventListener('pointermove',e=>{if(!SG||SG.n<2)return;const bx=c.getBoundingClientRect(),px=e.clientX-bx.left,r=Math.round((px-SG.m.l)/SG.m.pw*(SG.n-1));
-    if(r<0||r>=SG.n){SGh=-1;$('#sgtip').hidden=true;drawSig();return}
+  c.addEventListener('pointermove',e=>{if(!SG||SG.n<2||!SG.m)return;const bx=c.getBoundingClientRect(),px=e.clientX-bx.left,M2=SG.m,r=Math.round(M2.a+(px-M2.l)/M2.pw*(M2.b-M2.a));
+    if(r<0||r>=SG.n||px<M2.l||px>M2.l+M2.pw){SGh=-1;$('#sgtip').hidden=true;drawSig();return}
     SGh=r;drawSig();const tip=$('#sgtip');
     tip.innerHTML='<b>Repeater '+SG.lab(r)+(SG.fl&&SG.fl[r]?'~':'')+'</b> <span class="k">'+SG.km[r].toFixed(1)+' km</span>'+SG.ts.map((R,t)=>'<br><span style="color:'+SGCOL[t%8]+'">\u25CF</span> '+SG.names[t]+': '+fm(SG.s1[t][r])+' / '+fm(SG.s2[t][r])).join('')+'<br><span class="k">'+(SG.chg?'change in loop / differential':'loop / differential')+', dB</span>';
     tip.hidden=false;tip.style.left=Math.max(4,Math.min(px+14,c.clientWidth-tip.offsetWidth-4))+'px';tip.style.top='38px'});
   c.addEventListener('pointerleave',()=>{SGh=-1;$('#sgtip').hidden=true;if(SG)drawSig()});
+  c.addEventListener('wheel',e=>{if(!SG||SG.n<3||!SG.m)return;e.preventDefault();   // scroll to zoom the repeater range around the pointer
+    const bx=c.getBoundingClientRect(),full=SG.n-1,a=SG.m.a,b=SG.m.b,t=Math.max(0,Math.min(1,(e.clientX-bx.left-SG.m.l)/SG.m.pw)),xm=a+t*(b-a),s=Math.min(full,Math.max(Math.min(full,4),(b-a)*(e.deltaY>0?1.25:.8)));
+    let na=xm-t*s,nb=na+s;if(na<0){nb-=na;na=0}if(nb>full){na-=nb-full;nb=full}SGx={a:Math.max(0,na),b:nb};drawSig()},{passive:false});
+  c.addEventListener('dblclick',()=>{SGx=null;SGy=[null,null];if(SG)drawSig()});   // back to the full view
   new ResizeObserver(()=>{if(mode==='sig'&&SG)drawSig()}).observe(c);}
+barDrag($('#sgx'),(e,r)=>{   // horizontal bar: pan, zoom by the ends, click to jump
+  if(!SG||SG.n<3)return{mode:'none'};
+  const full=SG.n-1,k=full/r.width,h=e.target.classList;let mode=h.contains('l')?'l':h.contains('r')?'r':e.target===$('#sgxw')?'pan':'jump',a=SG.m.a,b=SG.m.b;
+  if(mode==='jump'){const cc=(e.clientX-r.left)*k,w=b-a;a=cc-w/2;b=cc+w/2;if(a<0){b-=a;a=0}if(b>full){a-=b-full;b=full}SGx={a:Math.max(0,a),b};drawSig();mode='pan'}
+  return{mode,k,full,a,b,cx:e.clientX};
+},(e,s)=>{if(!s||s.mode==='none')return;const d=(e.clientX-s.cx)*s.k,ms=Math.min(s.full,4);let a=s.a,b=s.b;
+  if(s.mode==='pan'){const w=b-a;a=Math.max(0,Math.min(s.full-w,a+d));b=a+w}else if(s.mode==='l')a=Math.max(0,Math.min(a+d,b-ms));else b=Math.min(s.full,Math.max(b+d,a+ms));
+  SGx={a,b};drawSig()});
+[0,1].forEach(pi=>{const bar=$('#sgy'+(pi+1));   // vertical bars: one per graph
+  barDrag(bar,(e,r)=>{const gp=SG&&SG.geo&&SG.geo[pi];if(!gp)return{mode:'none'};
+    const span=gp.fhi-gp.flo,k=span/r.height,h=e.target.classList;let mode=h.contains('t')?'t':h.contains('b')?'b':e.target===$('#sgy'+(pi+1)+'w')?'pan':'jump',lo=gp.lo,hi=gp.hi;
+    if(mode==='jump'){const cc=gp.fhi-(e.clientY-r.top)*k,w=hi-lo;lo=cc-w/2;hi=cc+w/2;SGy[pi]=[lo,hi];drawSig();mode='pan'}
+    return{mode,k,span,lo,hi,cy:e.clientY};
+  },(e,s)=>{if(!s||s.mode==='none')return;const d=-(e.clientY-s.cy)*s.k,ms=s.span*.02;let lo=s.lo,hi=s.hi;
+    if(s.mode==='pan'){lo+=d;hi+=d}else if(s.mode==='t')hi=Math.max(lo+ms,hi+d);else lo=Math.min(hi-ms,lo+d);
+    SGy[pi]=[lo,hi];drawSig()});
+  bar.addEventListener('dblclick',()=>{SGy[pi]=null;if(SG)drawSig()});});
 
 function setMode(m){
   mode=m;$('#view').hidden=m!=='2d'||!D;$('#detail').hidden=m!=='2d'||!D;$('#v3').hidden=m!=='3d';$('#v4').hidden=m!=='sig';$('#z2').hidden=m!=='2d';
