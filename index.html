@@ -48,7 +48,8 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--bg)}
 .r{color:var(--refl)}.err{color:var(--refl);margin-top:8px}
 .mk{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px 18px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 .k{color:var(--muted)}
-#rtip{position:absolute;pointer-events:none;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;line-height:1.4;box-shadow:0 2px 10px rgba(0,0,0,.28);white-space:nowrap;z-index:5}
+.flag td{background:rgba(216,67,21,.18)}
+#rtip,#sgtip{position:absolute;pointer-events:none;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;line-height:1.4;box-shadow:0 2px 10px rgba(0,0,0,.28);white-space:nowrap;z-index:5}
 input[type=number],select{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;max-width:260px}
 .bar label{display:inline-flex;gap:6px;align-items:center}
 label.btn{display:inline-flex}
@@ -63,11 +64,24 @@ h2{font-size:15px;margin:0 0 10px}
 <div class="card">
   <div class="bar">
     <label class="btn primary">Open trace file<input id="file" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label><label class="btn">+ Add<input id="file2" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label>
-    <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="rm" hidden title="Remove the trace on screen from the page (the file itself is not touched)">Remove trace</button><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D trace compare</button>
+    <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="rm" hidden title="Remove the trace on screen from the page (the file itself is not touched)">Remove trace</button><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D trace compare</button><button id="t4" hidden>Loop gain signature</button>
     <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button><button id="rp" class="primary">Repeaters</button><button id="rv" title="Number the repeaters from the other end of the trace, for a trace taken from the B end">Reverse numbering</button></span>
   </div>
   <div id="err" class="err"></div>
   <div id="drop">Drop a .sor or Advantest .all file anywhere on this page</div>
+  <div id="v4" hidden>
+    <div class="bar" style="margin-top:10px">
+      <label>Measure <select id="sm"><option value="auto">Auto</option><option value="plateau">Filter plateau (HLLB reflection)</option><option value="out">Output level after repeater</option></select></label>
+      <label>Show <select id="sw"><option value="abs">Absolute</option><option value="chg">Change from baseline</option></select></label>
+      <label>Baseline <select id="sbs"></select></label>
+      <label title="The Rayleigh level scales with pulse width; this removes the difference between traces. The filter plateau does not depend on pulse width."><input id="spw" type="checkbox" checked> Normalise for pulse width</label>
+      <label>Flag changes over <input id="sth" type="number" value="0.5" min="0.1" step="0.1" style="width:60px"> dB</label>
+    </div>
+    <div id="i4" class="sub" style="margin:8px 0 0"></div>
+    <div style="position:relative;height:560px;margin-top:4px"><canvas id="sgc" style="cursor:crosshair"></canvas><div id="sgtip" hidden></div></div>
+    <div id="sgt"></div>
+    <div class="sub" style="margin:8px 0 0">Repeaters are found with the detection settings on the 3D trace compare tab (Min step, Min spacing, Skip, Infer hidden repeaters). Compare traces taken from the same end; the numbering follows the baseline trace (use Reverse numbering for a trace taken from the B end).</div>
+  </div>
   <div id="v3" hidden>
     <div class="bar" style="margin-top:10px"><label>Min step <input id="stp" type="number" value="4" min="1" max="30" step="0.5" style="width:64px"> dB</label><label>Min spacing <input id="spc" type="number" value="15" min="1" max="300" style="width:64px"> km</label><label>Green ≤ <input id="gl" type="number" value="1" min="0" max="30" step="0.5" style="width:56px"> dB, red ≥ <input id="rl" type="number" value="10" min="1" max="60" style="width:56px"> dB</label><label title="Set markers A and B on the Trace tab first"><input id="lm" type="checkbox"> Only between markers A–B</label><label title="Where a span is a whole number of typical spans long, add the repeaters the noise has hidden (drawn hollow in the trace view, marked ~ in the table)"><input id="inf" type="checkbox" checked> Infer hidden repeaters</label><label><input id="gx" type="checkbox" checked> Gain from span-loss extrapolation</label><label title="Minimum distance skipped after each repeater; the page also always skips at least one pulse length">Skip after repeater <input id="sk" type="number" value="4" min="0" max="30" step="0.5" style="width:56px"> km</label><label>Data <select id="dt"><option value="full">Entire trace</option><option value="pk">Repeater peaks only</option></select></label><label>Show <select id="md"><option value="abs">Peak level</option><option value="diff">Difference vs baseline</option></select></label><label>Baseline <select id="bs"></select></label><label><input id="nrm" type="checkbox" checked> Remove each trace’s mean</label><button id="r3">Reset view</button></div>
     <div id="i3" class="sub" style="margin:8px 0 0"></div>
@@ -112,7 +126,7 @@ h2{font-size:15px;margin:0 0 10px}
 
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'009',date:'2026-11-05'};   // increment n on every change
+const BUILD={n:'010',date:'2026-11-05'};   // increment n on every change
 $('#bld').textContent='Build '+BUILD.n+' \u00b7 '+BUILD.date;
 const C=299792458;
 let D=null,V={x0:0,x1:1,cx:null};
@@ -590,10 +604,86 @@ function draw3d(){
   g.fillStyle=col('--muted');g.textAlign='left';g.fillText('≤'+gl+' dB',bx,by+22);g.textAlign='right';g.fillText('≥'+rl+' dB',bx+bw,by+22);
   g.textAlign='left';g.fillText('Colour = difference from baseline ('+yl[bi]+')',bx+bw+10,by+9);g.fillText('Height = '+(S3.diff?(S3.gx?'gain difference vs ':'difference vs ')+yl[bi]:S3.gx?($('#nrm').checked?'gain vs trace mean':'repeater gain step'):$('#nrm').checked?'level vs trace mean':'level (absolute)')+' (dB)',bx,by+38);
 }
+/* ---------- loop gain signature (LME style): loop gain and differential loop gain per repeater ---------- */
+let SG=null,SGraw=null,SGkey='',SGh=-1;
+const SGCOL=['#4fc3f7','#ffb74d','#81c784','#ba68c8','#e57373','#90a4ae','#f06292','#aed581'];
+const sgName=R=>{const d=R.fx.dt?new Date(R.fx.dt*1000).toISOString().slice(0,10):'';return R.name.replace(/\.[^.]+$/,'').slice(0,26)+(d?' ('+d+')':'')};
+function sigCompute(){   // per trace and repeater: the filter plateau level and the output level (extrapolated span line); cached until the traces or detection settings change
+  const st=+$('#stp').value||4,sp=+$('#spc').value||15,sk=+$('#sk').value||4,inf=$('#inf').checked;
+  const ts=T.slice().sort((a,b)=>(a.fx.dt||0)-(b.fx.dt||0)),key=ts.map(R=>R.name).join('|')+'|'+st+'|'+sp+'|'+sk+'|'+inf;
+  if(SGraw&&SGkey===key)return SGraw;
+  const EI=new Map(ts.map(R=>[R,sigEnd(R)])),ref=ts.reduce((a,b)=>EI.get(b)*b.dx>EI.get(a)*a.dx?b:a),km=repeaters(ref,st,sp,EI.get(ref),inf),P=[],O=[],hasPl=[];
+  ts.forEach(R=>{
+    const end=EI.get(R)*R.dx,G=gains(R,km,end,sk),pk=pwKm(R);
+    const pl=km.map(k=>{if(k>end)return NaN;const i0=Math.round((k+0.25*pk)/R.dx),i1=Math.max(i0+2,Math.round((k+0.75*pk)/R.dx));if(i1>=R.y.length)return NaN;
+      const a=Array.from(R.y.slice(i0,i1+1)).sort((x,y)=>x-y);return a[a.length>>1]+(R.absOff||0)});   // middle of the plateau: median level
+    const ou=G.map(g=>g.out==null?NaN:g.out);P.push(pl);O.push(ou);
+    const d=pl.map((v,i)=>v-ou[i]).filter(isFinite).sort((a,b)=>a-b);hasPl.push(d.length>2&&d[d.length>>1]>=8);   // a real plateau stands well above the level after it
+  });
+  SGkey=key;return SGraw={ts,km,P,O,hasPl};
+}
+function sigRender(){
+  if(!SGraw)return;
+  const {ts,km,P,O,hasPl}=SGraw,n=km.length,chg=$('#sw').value==='chg',thr=+$('#sth').value||0.5,usePw=$('#spw').checked;
+  const bi=Math.max(0,ts.indexOf(T[+$('#sbs').value])),use=$('#sm').value==='auto'?(hasPl[bi]?'plateau':'out'):$('#sm').value,pwb=ts[bi].fx.pw&&ts[bi].fx.pw[0];
+  const LG=ts.map((R,t)=>{const adj=use==='out'&&usePw&&pwb&&R.fx.pw&&R.fx.pw[0]?10*Math.log10(pwb/R.fx.pw[0]):0;return(use==='plateau'?P[t]:O[t]).map(v=>v+adj)});
+  const DLG=LG.map(a=>a.map((v,r)=>r&&isFinite(v)&&isFinite(a[r-1])?v-a[r-1]:NaN));   // differential loop gain = this repeater minus the previous one
+  const s1=chg?LG.map(a=>a.map((v,r)=>v-LG[bi][r])):LG,s2=chg?DLG.map(a=>a.map((v,r)=>v-DLG[bi][r])):DLG,rev=!!ts[bi].rev;
+  SG={ts,km,fl:km.fl,n,chg,thr,bi,rev,use,s1,s2,lab:r=>rev?n-r:r+1,names:ts.map(sgName)};
+  const warn=[];
+  if(use==='plateau')ts.forEach((R,t)=>{if(!hasPl[t])warn.push(sgName(R)+' has no filter plateau, so its values are not comparable')});
+  if(use==='out'&&usePw&&ts.some(R=>R.fx.pw&&pwb&&Math.abs(R.fx.pw[0]/pwb-1)>.05))warn.push('levels normalised for pulse width');
+  if(new Set(ts.map(R=>!!R.rev)).size>1)warn.push('traces are from different ends: numbering follows the baseline, distances are not mirrored');
+  $('#i4').textContent=n+' repeaters \u00b7 measure: '+(use==='plateau'?'filter plateau (HLLB reflection)':'output level after the repeater')+' \u00b7 baseline: '+sgName(ts[bi])+(rev?' \u00b7 numbered from the far end':'')+(warn.length?' \u00b7 '+warn.join(' \u00b7 '):'');
+  sigTable();drawSig();
+}
+function sigTable(){
+  const S=SG,f=v=>isFinite(v)?v.toFixed(2):'\u2013';
+  let h='<table><thead><tr><th rowspan="2">#</th><th rowspan="2">km</th>'+S.names.map((nm,t)=>'<th colspan="2" style="color:'+SGCOL[t%8]+'">'+nm+(t===S.bi?' (baseline)':'')+'</th>').join('')+'</tr><tr>'+S.names.map(()=>'<th>'+(S.chg?'\u0394 loop':'Loop')+'</th><th>'+(S.chg?'\u0394 diff':'Diff')+'</th>').join('')+'</tr></thead><tbody>';
+  for(let r=0;r<S.n;r++){const flag=S.chg&&S.ts.some((R,t)=>t!==S.bi&&Math.abs(S.s2[t][r])>S.thr);
+    h+='<tr'+(flag?' class="flag"':'')+'><td>'+S.lab(r)+(S.fl&&S.fl[r]?'~':'')+'</td><td>'+S.km[r].toFixed(1)+'</td>'+S.ts.map((R,t)=>'<td>'+f(S.s1[t][r])+'</td><td><b>'+f(S.s2[t][r])+'</b></td>').join('')+'</tr>'}
+  $('#sgt').innerHTML='<h2 style="margin:14px 0 6px">Per-repeater values</h2><div class="tbl" style="max-height:340px;overflow:auto">'+h+'</tbody></table></div><div class="sub" style="margin:6px 0 0">Loop gain is the level measured at each repeater; differential loop gain is the difference from the previous repeater (dB). In change mode both are relative to the baseline trace, and rows are shaded where the differential change exceeds the flag level. A ~ marks a repeater inferred from the span length.</div>';
+}
+function drawSig(){
+  const c=$('#sgc'),b=c.getBoundingClientRect(),dpr=devicePixelRatio||1;c.width=b.width*dpr;c.height=b.height*dpr;
+  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.font='11px system-ui,sans-serif';
+  const cs=getComputedStyle(document.documentElement),col=k=>cs.getPropertyValue(k).trim();
+  if(!SG||SG.n<2){g.fillStyle=col('--muted');g.fillText('Need at least two repeaters. Lower Min step on the 3D trace compare tab if none are found.',16,28);return}
+  const S=SG,W=b.width,H=b.height,m={l:60,r:18,t:30,b:30},gap=46,ph=(H-m.t-m.b-gap)/2,pw=W-m.l-m.r,X=r=>m.l+r/(S.n-1)*pw;S.m={l:m.l,pw};
+  let lx=m.l;g.textAlign='left';S.ts.forEach((R,t)=>{g.fillStyle=SGCOL[t%8];g.fillRect(lx,9,14,4);g.fillStyle=col('--fg');const tx=S.names[t]+(t===S.bi?' (baseline)':'');g.fillText(tx,lx+19,14);lx+=g.measureText(tx).width+38});
+  [[m.t,S.s1,S.chg?'Change in loop gain (dB)':'Loop gain (dB)',0],[m.t+ph+gap,S.s2,S.chg?'Change in differential loop gain (dB)':'Differential loop gain (dB)',1]].forEach(([y0,A,title,pi])=>{
+    let lo=1e9,hi=-1e9;A.forEach(a=>a.forEach(v=>{if(isFinite(v)){if(v<lo)lo=v;if(v>hi)hi=v}}));if(S.chg||pi===1){lo=Math.min(lo,0);hi=Math.max(hi,0)}
+    if(!(hi>lo)){lo=0;hi=1}const pad=(hi-lo)*.08;lo-=pad;hi+=pad;const Y=v=>y0+(hi-v)/(hi-lo)*ph,sy=nice(hi-lo,5);
+    g.strokeStyle=col('--line');g.lineWidth=1;g.fillStyle=col('--muted');g.textAlign='right';
+    for(let v=Math.ceil(lo/sy)*sy;v<=hi;v+=sy){const py=Math.round(Y(v))+.5;g.beginPath();g.moveTo(m.l,py);g.lineTo(m.l+pw,py);g.stroke();g.fillText(+v.toFixed(2),m.l-6,py+4)}
+    g.save();g.translate(13,y0+ph/2);g.rotate(-Math.PI/2);g.textAlign='center';g.fillText(title,0,0);g.restore();
+    if(lo<0&&hi>0){g.strokeStyle=col('--muted');g.setLineDash([4,3]);g.beginPath();g.moveTo(m.l,Y(0));g.lineTo(m.l+pw,Y(0));g.stroke();g.setLineDash([])}
+    const st=Math.max(1,Math.ceil(S.n/22));g.textAlign='center';g.fillStyle=col('--muted');
+    for(let r=0;r<S.n;r+=st)g.fillText(S.lab(r),X(r),y0+ph+15);
+    g.textAlign='right';g.fillText(S.rev?'T2':'T1',m.l-8,y0+ph+15);g.textAlign='left';g.fillText(S.rev?'T1':'T2',m.l+pw+4,y0+ph+15);
+    S.ts.forEach((R,t)=>{const a=A[t];g.strokeStyle=g.fillStyle=SGCOL[t%8];g.lineWidth=t===S.bi?2.4:1.4;g.beginPath();let on=false;
+      a.forEach((v,r)=>{if(!isFinite(v)){on=false;return}g[on?'lineTo':'moveTo'](X(r),Y(v));on=true});g.stroke();
+      if(S.n<=140)a.forEach((v,r)=>{if(!isFinite(v))return;g.beginPath();g.arc(X(r),Y(v),t===S.bi?2.8:2.2,0,6.3);g.fill()});
+      if(S.chg&&pi===1&&t!==S.bi)a.forEach((v,r)=>{if(isFinite(v)&&Math.abs(v)>S.thr){g.strokeStyle='#d84315';g.lineWidth=1.6;g.beginPath();g.arc(X(r),Y(v),6,0,6.3);g.stroke()}})});   // flagged changes ringed in red
+    if(SGh>=0){g.strokeStyle=col('--accent');g.lineWidth=1;g.setLineDash([3,3]);g.beginPath();g.moveTo(X(SGh),y0);g.lineTo(X(SGh),y0+ph);g.stroke();g.setLineDash([])}
+  });
+}
+function refreshSig(){if(!T.length)return;sigCompute();sigRender()}
+function tabsUI(){$('#t2').hidden=$('#t4').hidden=!T.length;$('#t3').hidden=T.length<2}
+['sm','sw','sbs','spw','sth'].forEach(id=>$('#'+id).addEventListener('input',sigRender));
+{const c=$('#sgc'),fm=v=>isFinite(v)?v.toFixed(2):'\u2013';
+  c.addEventListener('pointermove',e=>{if(!SG||SG.n<2)return;const bx=c.getBoundingClientRect(),px=e.clientX-bx.left,r=Math.round((px-SG.m.l)/SG.m.pw*(SG.n-1));
+    if(r<0||r>=SG.n){SGh=-1;$('#sgtip').hidden=true;drawSig();return}
+    SGh=r;drawSig();const tip=$('#sgtip');
+    tip.innerHTML='<b>Repeater '+SG.lab(r)+(SG.fl&&SG.fl[r]?'~':'')+'</b> <span class="k">'+SG.km[r].toFixed(1)+' km</span>'+SG.ts.map((R,t)=>'<br><span style="color:'+SGCOL[t%8]+'">\u25CF</span> '+SG.names[t]+': '+fm(SG.s1[t][r])+' / '+fm(SG.s2[t][r])).join('')+'<br><span class="k">'+(SG.chg?'change in loop / differential':'loop / differential')+', dB</span>';
+    tip.hidden=false;tip.style.left=Math.max(4,Math.min(px+14,c.clientWidth-tip.offsetWidth-4))+'px';tip.style.top='38px'});
+  c.addEventListener('pointerleave',()=>{SGh=-1;$('#sgtip').hidden=true;if(SG)drawSig()});
+  new ResizeObserver(()=>{if(mode==='sig'&&SG)drawSig()}).observe(c);}
+
 function setMode(m){
-  mode=m;$('#view').hidden=m!=='2d'||!D;$('#detail').hidden=m!=='2d'||!D;$('#v3').hidden=m!=='3d';$('#z2').hidden=m!=='2d';
-  $('#t2').className=m==='2d'?'primary':'';$('#t3').className=m==='3d'?'primary':'';
-  if(m==='3d')refresh3d();else if(D)draw();
+  mode=m;$('#view').hidden=m!=='2d'||!D;$('#detail').hidden=m!=='2d'||!D;$('#v3').hidden=m!=='3d';$('#v4').hidden=m!=='sig';$('#z2').hidden=m!=='2d';
+  $('#t2').className=m==='2d'?'primary':'';$('#t3').className=m==='3d'?'primary':'';$('#t4').className=m==='sig'?'primary':'';
+  if(m==='3d')refresh3d();else if(m==='sig')refreshSig();else if(D)draw();
 }
 async function loadFiles(files,add){
   const fl=[...files];if(!fl.length)return;
@@ -602,11 +692,11 @@ async function loadFiles(files,add){
     try{const R=parseAny(await f.arrayBuffer());R.name=f.name;out.push(R)}catch(e){$('#err').textContent+='Could not read '+f.name+': '+e.message+'  '}}
   if(!out.length)return;T=out;
   $('#sel').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+R.name.replace(/[<&"]/g,'')+(R.fx.wl?' ('+R.fx.wl+' nm)':'')+'</option>').join('');
-  $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;$('#t2').hidden=$('#t3').hidden=T.length<2;$('#rm').hidden=false;
+  $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;tabsUI();$('#rm').hidden=false;
   const last=T[T.length-1];$('#sel').value=T.length-1;show(last,last.name);
-  const lo=T.reduce((a,R,i)=>R.fx.wl<T[a].fx.wl||R.fx.wl===T[a].fx.wl&&R.fx.dt<T[a].fx.dt?i:a,0);$('#bs').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+(R.fx.wl?R.fx.wl+' nm – ':'')+R.name.replace(/[<&"]/g,'')+'</option>').join('');$('#bs').value=lo;
+  const lo=T.reduce((a,R,i)=>R.fx.wl<T[a].fx.wl||R.fx.wl===T[a].fx.wl&&R.fx.dt<T[a].fx.dt?i:a,0);$('#bs').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+(R.fx.wl?R.fx.wl+' nm – ':'')+R.name.replace(/[<&"]/g,'')+'</option>').join('');$('#bs').value=lo;$('#sbs').innerHTML=$('#bs').innerHTML;$('#sbs').value=lo;
   $('#md').value=T.length===2?'diff':'abs';$('#nrm').checked=T.length!==2&&!$('#gx').checked;
-  if(T.length<2)mode='2d';setMode(mode);
+  if(T.length<2&&mode==='3d')mode='2d';setMode(mode);
 }
 $('#sel').onchange=e=>{const R=T[+e.target.value];show(R,R.name);setMode(mode)};
 function fillLists(){   // rebuild the trace selector and the baseline list; returns the default baseline (lowest wavelength, then oldest)
@@ -621,15 +711,15 @@ function removeTrace(){   // take the trace on screen out of the session
   T.splice(i,1);S3=null;$('#rtip').hidden=true;RP.h=-1;
   if(!T.length){   // nothing left: back to the empty start screen
     D=null;mode='2d';V={x0:0,x1:1,cx:null};
-    ['#view','#detail','#v3','#sel','#t2','#t3','#rm'].forEach(s=>$(s).hidden=true);
+    ['#view','#detail','#v3','#v4','#sel','#t2','#t3','#t4','#rm'].forEach(s=>$(s).hidden=true);
     $('#drop').hidden=false;$('#fname').hidden=false;$('#fname').textContent='No file loaded';$('#err').textContent='';return}
   const k=Math.min(i,T.length-1),lo=fillLists(),bi=T.indexOf(base);
-  $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;$('#t2').hidden=$('#t3').hidden=T.length<2;$('#sel').value=k;$('#bs').value=bi>=0?bi:lo;
-  if(T.length<2)mode='2d';
+  $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;tabsUI();$('#sel').value=k;$('#bs').value=bi>=0?bi:lo;$('#sbs').innerHTML=$('#bs').innerHTML;$('#sbs').value=bi>=0?bi:lo;
+  if(T.length<2&&mode==='3d')mode='2d';
   show(T[k],T[k].name);setMode(mode);
 }
 $('#rm').onclick=removeTrace;
-$('#t2').onclick=()=>setMode('2d');$('#t3').onclick=()=>setMode('3d');
+$('#t2').onclick=()=>setMode('2d');$('#t3').onclick=()=>setMode('3d');$('#t4').onclick=()=>setMode('sig');
 ['stp','spc','nrm','md','dt','gl','rl','bs','sk','lm','inf'].forEach(id=>$('#'+id).addEventListener('input',refresh3d));
 $('#md').addEventListener('change',()=>{$('#nrm').checked=$('#md').value!=='diff'&&!$('#gx').checked;refresh3d()});
 $('#gx').addEventListener('change',()=>{if($('#gx').checked)$('#nrm').checked=false;refresh3d()});
