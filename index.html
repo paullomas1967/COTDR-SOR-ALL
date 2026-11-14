@@ -70,18 +70,18 @@ h2{font-size:15px;margin:0 0 10px}
   <div class="bar">
     <label class="btn primary">Open trace file<input id="file" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label><label class="btn">+ Add<input id="file2" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label>
     <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="rm" hidden title="Remove the trace on screen from the page (the file itself is not touched)">Remove trace</button><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D trace compare</button><button id="t4" hidden>Loop gain signature</button>
-    <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button><button id="rp" class="primary">Repeaters</button><button id="rv" title="Number the repeaters from the other end of the trace, for a trace taken from the B end">Reverse numbering</button></span>
+    <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button><button id="rp" class="primary">Repeaters</button><button id="ed" title="Add or remove repeaters and equalisers by hand">Edit repeaters</button><button id="rv" title="Number the repeaters from the other end of the trace, for a trace taken from the B end">Reverse numbering</button></span>
   </div>
   <div id="err" class="err"></div>
   <div id="drop">Drop a .sor or Advantest .all file anywhere on this page</div>
   <div id="v4" hidden>
     <div class="bar" style="margin-top:10px">
-      <label>Measure <select id="sm"><option value="auto">Auto</option><option value="plateau">Filter plateau (HLLB reflection)</option><option value="out">Output level after repeater</option></select></label>
-      <label>Show <select id="sw"><option value="abs">Absolute</option><option value="chg">Change from baseline</option></select></label>
+      <label>Measure <select id="sm"><option value="out">Rayleigh level after the repeater (loop gain)</option><option value="plateau">HLLB reflection peak (filter plateau)</option></select></label>
+      <label>Show <select id="sw"><option value="abs">Absolute</option><option value="chg">Deviation from baseline</option></select></label>
       <label>Baseline <select id="sbs"></select></label>
       <label title="Set markers A and B on the Trace tab first. Only the repeaters between them are shown, which removes noisy stretches."><input id="slm" type="checkbox"> Only between markers A–B</label>
       <label title="The Rayleigh level scales with pulse width; this removes the difference between traces. The filter plateau does not depend on pulse width."><input id="spw" type="checkbox" checked> Normalise for pulse width</label>
-      <label>Flag changes relative to baseline over <input id="sth" type="number" value="0.5" min="0.1" step="0.1" style="width:60px"> dB</label>
+      <label>Flag span loss deviation relative to baseline over <input id="sth" type="number" value="0.5" min="0.1" step="0.1" style="width:60px"> dB</label>
     </div>
     <div id="i4" class="sub" style="margin:8px 0 0"></div>
     <div style="position:relative;height:540px;margin-top:4px"><canvas id="sgc" style="cursor:crosshair"></canvas><div id="sgtip" hidden></div>
@@ -92,9 +92,9 @@ h2{font-size:15px;margin:0 0 10px}
     <div class="sub" style="margin:8px 0 0">Repeaters are found with the detection settings on the 3D trace compare tab (Min step, Min spacing, Skip, Infer hidden repeaters). Compare traces taken from the same end; the numbering follows the baseline trace (use Reverse numbering for a trace taken from the B end).</div>
   </div>
   <div id="v3" hidden>
-    <div class="bar" style="margin-top:10px"><label>Min step <input id="stp" type="number" value="4" min="1" max="30" step="0.5" style="width:64px"> dB</label><label>Min spacing <input id="spc" type="number" value="15" min="1" max="300" style="width:64px"> km</label><label>Green ≤ <input id="gl" type="number" value="1" min="0" max="30" step="0.5" style="width:56px"> dB, red ≥ <input id="rl" type="number" value="10" min="1" max="60" style="width:56px"> dB</label><label title="Set markers A and B on the Trace tab first"><input id="lm" type="checkbox"> Only between markers A–B</label><label title="Where a span is a whole number of typical spans long, add the repeaters the noise has hidden (drawn hollow in the trace view, marked ~ in the table)"><input id="inf" type="checkbox" checked> Infer hidden repeaters</label><label><input id="gx" type="checkbox" checked> Gain from span-loss extrapolation</label><label title="Minimum distance skipped after each repeater; the page also always skips at least one pulse length">Skip after repeater <input id="sk" type="number" value="4" min="0" max="30" step="0.5" style="width:56px"> km</label><label>Data <select id="dt"><option value="full">Entire trace</option><option value="pk">Repeater peaks only</option></select></label><label>Show <select id="md"><option value="abs">Peak level</option><option value="diff">Difference vs baseline</option></select></label><label>Baseline <select id="bs"></select></label><label><input id="nrm" type="checkbox" checked> Remove each trace’s mean</label><button id="r3">Reset view</button></div>
+    <div class="bar" style="margin-top:10px"><label>Min step <input id="stp" type="number" value="4" min="1" max="30" step="0.5" style="width:64px"> dB</label><label>Min spacing <input id="spc" type="number" value="15" min="1" max="300" style="width:64px"> km</label><label>Green ≤ <input id="gl" type="number" value="1" min="0" max="30" step="0.5" style="width:56px"> dB, red ≥ <input id="rl" type="number" value="10" min="1" max="60" style="width:56px"> dB</label><label title="Set markers A and B on the Trace tab first"><input id="lm" type="checkbox"> Only between markers A–B</label><label title="Number the repeaters along the distance axis"><input id="rn" type="checkbox" checked> Repeater numbers</label><label title="Where a span is a whole number of typical spans long, add the repeaters the noise has hidden (drawn hollow in the trace view, marked ~ in the table)"><input id="inf" type="checkbox" checked> Infer hidden repeaters</label><label><input id="gx" type="checkbox" checked> Gain from span-loss extrapolation</label><label title="Minimum distance skipped after each repeater; the page also always skips at least one pulse length">Skip after repeater <input id="sk" type="number" value="4" min="0" max="30" step="0.5" style="width:56px"> km</label><label>Data <select id="dt"><option value="full">Entire trace</option><option value="pk">Repeater peaks only</option></select></label><label>Show <select id="md"><option value="abs">Peak level</option><option value="diff">Difference vs baseline</option></select></label><label>Baseline <select id="bs"></select></label><label><input id="nrm" type="checkbox" checked> Remove each trace’s mean</label><button id="r3">Reset view</button></div>
     <div id="i3" class="sub" style="margin:8px 0 0"></div>
-    <div style="height:480px;margin-top:4px"><canvas id="c3" style="cursor:grab;touch-action:none"></canvas></div>
+    <div style="height:480px;margin-top:4px;position:relative"><canvas id="c3" style="cursor:grab;touch-action:none"></canvas><div id="z3" class="sgy" hidden style="top:24px;height:432px" title="Vertical zoom: drag to pan, drag the ends to zoom, double-click for auto"><div class="win" id="z3w"><i class="h t"></i><i class="h b"></i></div></div></div>
     <div class="sub" style="margin:6px 0 0">Height of each repeater’s measured value, per wavelength. Drag to rotate, scroll to zoom.</div>
     <div id="gt"></div>
   </div>
@@ -102,6 +102,11 @@ h2{font-size:15px;margin:0 0 10px}
     <div id="plotwrap"><div id="plot"><canvas id="cv"></canvas><div id="rtip" hidden></div></div><div id="ybar" title="Vertical zoom: drag to pan, drag the ends to zoom, double-click for auto"><div id="ywin" class="win"><i class="h t"></i><i class="h b"></i></div></div></div>
     <div id="xbar" title="Horizontal zoom: drag to pan, drag the ends to zoom, click to jump"><canvas id="mini"></canvas><div id="xwin" class="win"><i class="h l"></i><i class="h r"></i></div></div>
     <div id="read">Hover the trace for distance and level · scroll to zoom · drag to pan · double-click to fit · or use the zoom bars</div>
+    <div id="edp" hidden><div class="bar" style="margin-top:10px">
+      <button id="ed-add" title="Click the plot to add a repeater (it snaps to the nearest rise)">Add repeater</button><button id="ed-del" title="Click near a repeater triangle to remove it">Remove repeater</button>
+      <button id="ed-eqa" title="Click the plot to mark an equaliser">Add equaliser</button><button id="ed-eqd" title="Click near an equaliser marker to remove it">Remove equaliser</button>
+      <button id="ed-undo">Undo</button><button id="ed-clr">Clear all edits</button><span id="ed-note" class="k"></span></div>
+      <div class="sub" style="margin:8px 0 0">Pick a mode, then click the plot. Edits apply to every loaded trace, change the numbering everywhere, and last until the page is closed. Added repeaters are orange triangles, equalisers are purple diamonds.</div></div>
     <div id="lvp" hidden><div class="mk">
       <div><b style="color:#2e7d32">U</b> <span id="lvu"></span></div>
       <div><b style="color:#d81b60">L</b> <span id="lvl"></span></div>
@@ -135,7 +140,7 @@ h2{font-size:15px;margin:0 0 10px}
 
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'011',date:'2026-11-05'};   // increment n on every change
+const BUILD={n:'012',date:'2026-11-05'};   // increment n on every change
 $('#bld').textContent='Build '+BUILD.n+' \u00b7 '+BUILD.date;
 const C=299792458;
 let D=null,V={x0:0,x1:1,cx:null};
@@ -316,7 +321,8 @@ function draw(){
   if(RP.on){const r=getRP();g.fillStyle=col('--muted');   // repeater ticks along the top; the hovered one is highlighted
     r.km.forEach((k,i)=>{if(k<V.x0||k>V.x1)return;const x=X(k);
       if(i===RP.h){g.strokeStyle=col('--accent');g.lineWidth=1;g.setLineDash([3,3]);g.beginPath();g.moveTo(x,m.t);g.lineTo(x,m.t+ph);g.stroke();g.setLineDash([]);g.fillStyle=col('--accent')}
-      g.beginPath();g.moveTo(x-4,m.t);g.lineTo(x+4,m.t);g.lineTo(x,m.t+7);g.closePath();if(r.fl&&r.fl[i]){g.strokeStyle=i===RP.h?col('--accent'):col('--muted');g.lineWidth=1.2;g.stroke()}else g.fill();g.fillStyle=col('--muted')})}   // inferred repeaters are drawn hollow
+      g.beginPath();g.moveTo(x-4,m.t);g.lineTo(x+4,m.t);g.lineTo(x,m.t+7);g.closePath();if(r.fl&&r.fl[i]===3){g.fillStyle='#f57c00';g.fill()}else if(r.fl&&r.fl[i]){g.strokeStyle=i===RP.h?col('--accent'):col('--muted');g.lineWidth=1.2;g.stroke()}else g.fill();g.fillStyle=col('--muted')})}   // inferred repeaters are drawn hollow
+  MAN.eq.forEach(k=>{if(k<V.x0||k>V.x1)return;const x=X(k);g.fillStyle='#8e24aa';g.beginPath();g.moveTo(x,m.t+8);g.lineTo(x+5,m.t+14);g.lineTo(x,m.t+20);g.lineTo(x-5,m.t+14);g.closePath();g.fill();g.setLineDash([2,3]);g.strokeStyle='#8e24aa';g.lineWidth=1;g.beginPath();g.moveTo(x,m.t+20);g.lineTo(x,m.t+ph);g.stroke();g.setLineDash([])});   // equaliser markers
   if(M.on){const xa=X(M.a),xb=X(M.b),ci=k=>Math.max(0,Math.min(N-1,Math.round(k/dx)));
     g.fillStyle='rgba(128,128,128,.13)';g.fillRect(Math.min(xa,xb),m.t,Math.abs(xb-xa),ph);g.textAlign='center';g.font='bold 11px system-ui,sans-serif';
     [['A',xa,'#f57c00',M.a],['B',xb,'#8e24aa',M.b]].forEach(([n,x,c,k])=>{g.strokeStyle=g.fillStyle=c;g.lineWidth=1.5;g.beginPath();g.moveTo(x,m.t);g.lineTo(x,m.t+ph);g.stroke();
@@ -346,7 +352,8 @@ cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);const px
   if(!lv&&M.on&&D){const X=k=>V.m.l+(k-V.x0)/(V.x1-V.x0)*V.pw,da=Math.abs(px-X(M.a)),db=Math.abs(px-X(M.b));if(Math.min(da,db)<9)mk=da<=db?'a':'b'}
   drag={x:e.clientX,x0:V.x0,x1:V.x1,mk,lv,moved:false}});
 cv.addEventListener('pointerup',e=>{
-  if(drag&&M.on&&!drag.mk&&!drag.lv&&!drag.moved&&D){const x=snapX(xAt(e.clientX-view().left));M[Math.abs(x-M.a)<=Math.abs(x-M.b)?'a':'b']=x;draw()}   // a click moves the nearest marker
+  if(drag&&ED.mode&&!drag.mk&&!drag.lv&&!drag.moved&&D){editClick(e.clientX-view().left)}
+  else if(drag&&M.on&&!drag.mk&&!drag.lv&&!drag.moved&&D){const x=snapX(xAt(e.clientX-view().left));M[Math.abs(x-M.a)<=Math.abs(x-M.b)?'a':'b']=x;draw()}   // a click moves the nearest marker
   drag=null});
 cv.addEventListener('pointermove',e=>{
   if(!D)return;const px=e.clientX-view().left;
@@ -372,10 +379,40 @@ $('#evs').addEventListener('click',e=>{
 });
 new ResizeObserver(draw).observe($('#plot'));
 
+/* ---------- manual repeater and equaliser edits (shared by every loaded trace) ---------- */
+const MAN={add:[],del:[],eq:[],h:[],v:0},ED={mode:null};
+function edNote(){const a=MAN.add.length,d=MAN.del.length,q=MAN.eq.length;
+  $('#ed-note').textContent=(a||d||q)?a+' added \u00b7 '+d+' removed \u00b7 '+q+' equaliser'+(q===1?'':'s'):'No manual edits yet';
+  [['add','#ed-add'],['del','#ed-del'],['eqa','#ed-eqa'],['eqd','#ed-eqd']].forEach(([m,id])=>$(id).className=ED.mode===m?'primary':'');
+  $('#plot').style.cursor=ED.mode?'copy':''}
+function manChanged(){MAN.v++;T.forEach(R=>{R.rp=null});SGraw=null;edNote();if(mode==='3d')refresh3d();else if(mode==='sig')refreshSig();else if(D)draw()}
+function manEdit(kind,x){
+  if(kind==='add'){MAN.add.push(x);MAN.h.push(['add',x])}
+  else if(kind==='del'){const j=MAN.add.findIndex(a=>Math.abs(a-x)<=2.5);   // removing a repeater you added just undoes the addition
+    if(j>=0){MAN.h.push(['unadd',MAN.add[j]]);MAN.add.splice(j,1)}else{MAN.del.push(x);MAN.h.push(['del',x])}}
+  else if(kind==='eqa'){MAN.eq.push(x);MAN.h.push(['eqa',x])}
+  else if(kind==='eqd'){const j=MAN.eq.indexOf(x);if(j>=0)MAN.eq.splice(j,1);MAN.h.push(['eqd',x])}
+  manChanged()}
+function manUndo(){const h=MAN.h.pop();if(!h)return;const k=h[0],x=h[1];
+  if(k==='add')MAN.add.splice(MAN.add.lastIndexOf(x),1);else if(k==='unadd')MAN.add.push(x);else if(k==='del')MAN.del.splice(MAN.del.lastIndexOf(x),1);
+  else if(k==='eqa')MAN.eq.splice(MAN.eq.lastIndexOf(x),1);else if(k==='eqd')MAN.eq.push(x);manChanged()}
+function editClick(px){   // a click on the plot while an edit mode is active
+  const R=D,x=xAt(px),X=k=>V.m.l+(k-V.x0)/(V.x1-V.x0)*V.pw,near=a=>{let b=-1,bd=10;a.forEach((k,i)=>{const d=Math.abs(px-X(k));if(d<bd){bd=d;b=i}});return b};
+  if(ED.mode==='add'){const w1=Math.max(2,Math.round(0.5/R.dx));let best=x,bv=-1e9;   // snap to the steepest rise within 1.5 km of the click
+    for(let xx=x-1.5;xx<=x+1.5;xx+=R.dx){const i=Math.round(xx/R.dx);if(i<w1||i+w1+1>=R.y.length)continue;const v=rise(R,i,w1);if(v>bv){bv=v;best=xx}}
+    manEdit('add',bv>3?best:x)}
+  else if(ED.mode==='del'){const r=getRP(),i=near(r.km);if(i>=0)manEdit('del',r.km[i])}
+  else if(ED.mode==='eqa')manEdit('eqa',x);
+  else if(ED.mode==='eqd'){const i=near(MAN.eq);if(i>=0)manEdit('eqd',MAN.eq[i])}}
+[['#ed-add','add'],['#ed-del','del'],['#ed-eqa','eqa'],['#ed-eqd','eqd']].forEach(([id,m])=>$(id).onclick=()=>{ED.mode=ED.mode===m?null:m;edNote()});
+$('#ed-undo').onclick=manUndo;
+$('#ed-clr').onclick=()=>{MAN.add.length=MAN.del.length=MAN.eq.length=MAN.h.length=0;ED.mode=null;manChanged()};
+$('#ed').onclick=()=>{const p=$('#edp');p.hidden=!p.hidden;$('#ed').className=p.hidden?'':'primary';if(p.hidden){ED.mode=null;edNote()}};
+
 /* ---------- repeater numbers on hover ---------- */
 let RP={on:true,h:-1};
 function getRP(){   // repeaters of the trace on screen, using the detection settings from the 3D controls (cached per trace and settings)
-  const R=D,st=+$('#stp').value||4,sp=+$('#spc').value||15,sk=+$('#sk').value||4,inf=$('#inf').checked,key=st+'|'+sp+'|'+sk+'|'+inf;
+  const R=D,st=+$('#stp').value||4,sp=+$('#spc').value||15,sk=+$('#sk').value||4,inf=$('#inf').checked,key=st+'|'+sp+'|'+sk+'|'+inf+'|'+MAN.v;
   if(!R.rp||R.rp.key!==key){const ei=sigEnd(R),km=repeaters(R,st,sp,ei,inf);R.rp={key,km,fl:km.fl,G:gains(R,km,ei*R.dx,sk)}}
   return R.rp;
 }
@@ -384,10 +421,12 @@ function rpHover(px,py){
   if(!RP.on||!D||drag){tip.hidden=true;RP.h=-1;return}
   const r=getRP(),X=k=>V.m.l+(k-V.x0)/(V.x1-V.x0)*V.pw;let best=-1,bd=9;
   r.km.forEach((k,i)=>{const d=Math.abs(px-X(k));if(d<bd){bd=d;best=i}});
+  if(best<0){let eb=-1,ed=9;MAN.eq.forEach((k,i)=>{const d=Math.abs(px-X(k));if(d<ed){ed=d;eb=i}});
+    if(eb>=0){RP.h=-1;tip.innerHTML='<b>Equaliser</b> <span class="k">(added by hand)</span><br>'+MAN.eq[eb].toFixed(2)+' km';tip.hidden=false;tip.style.left=Math.max(4,Math.min(px+14,$('#plot').clientWidth-tip.offsetWidth-4))+'px';tip.style.top=Math.max(4,py-tip.offsetHeight-10)+'px';return}}
   RP.h=best;if(best<0){tip.hidden=true;return}
   const k=r.km[best],g=r.G[best],nx=r.km[best+1];
   const L=r.km.length,num=D.rev?L-best:best+1,nn=D.rev?num-1:num+1;   // reversed: the repeater nearest this end of the trace has the highest number
-  tip.innerHTML='<b>Repeater '+num+'</b> <span class="k">of '+L+(D.rev?' (numbered from the far end)':'')+'</span>'+(r.fl&&r.fl[best]?'<br><i>inferred from '+(r.fl[best]===1?'a weak rise and span length':'span length only')+'</i>':'')+'<br>'+k.toFixed(2)+' km'+(nx!=null?'<br>Span to repeater '+nn+': '+(nx-k).toFixed(1)+' km':'')+(g&&g.gain!=null?'<br>Gain: '+g.gain.toFixed(1)+' dB \u00b7 '+(-g.slope).toFixed(3)+' dB/km':'');
+  tip.innerHTML='<b>Repeater '+num+'</b> <span class="k">of '+L+(D.rev?' (numbered from the far end)':'')+'</span>'+(r.fl&&r.fl[best]?(r.fl[best]===3?'<br><i>added manually</i>':'<br><i>inferred from '+(r.fl[best]===1?'a weak rise and span length':'span length only')+'</i>'):'')+'<br>'+k.toFixed(2)+' km'+(nx!=null?'<br>Span to repeater '+nn+': '+(nx-k).toFixed(1)+' km':'')+(g&&g.gain!=null?'<br>Gain: '+g.gain.toFixed(1)+' dB \u00b7 '+(-g.slope).toFixed(3)+' dB/km':'');
   tip.hidden=false;tip.style.left=Math.max(4,Math.min(px+14,$('#plot').clientWidth-tip.offsetWidth-4))+'px';tip.style.top=Math.max(4,py-tip.offsetHeight-10)+'px';
 }
 $('#rp').onclick=()=>{RP.on=!RP.on;RP.h=-1;$('#rtip').hidden=true;$('#rp').className=RP.on?'primary':'';draw()};
@@ -507,6 +546,9 @@ function repeaters(R,step,spacing,end,infer){   // km positions of repeaters; th
         for(let x=e-0.3*s;x<=e+0.3*s;x+=R.dx){const ii=Math.round(x/R.dx);if(ii<w||ii+w+1>=N)continue;const v=rise(R,ii,w);if(v>bv){bv=v;best=x}}
         if(bv>=thr)add.push([best,1]);else if(whole)add.push([e,2])}}   // use the strongest weak rise near the expected place, else the expected place itself
     if(add.length){const all=km.map(k=>[k,0]).concat(add).sort((a,b)=>a[0]-b[0]);km=all.map(a=>a[0]);fl=all.map(a=>a[1])}}
+  if(MAN.add.length||MAN.del.length){   // the user's own edits override whatever was detected within 2.5 km
+    let Lm=km.map((k,i)=>[k,fl[i]]);MAN.del.forEach(x=>{Lm=Lm.filter(a=>Math.abs(a[0]-x)>2.5)});
+    MAN.add.forEach(x=>{Lm=Lm.filter(a=>Math.abs(a[0]-x)>2.5);Lm.push([x,3])});Lm.sort((a,b)=>a[0]-b[0]);km=Lm.map(a=>a[0]);fl=Lm.map(a=>a[1])}
   km.fl=fl;return km;
 }
 function spanFit(R,x0,x1){   // least-squares line through one span-loss profile between x0 and x1 (km); R = {y,dx,fy,cut}
@@ -526,13 +568,14 @@ function gains(R,km,end,skip){   // per repeater: input = incoming span line, ou
   const P={y:Y,dx:R.dx,fy:R.yd?null:R.fyd,cut:z.sep>=4&&!R.yd?z.nl+2:null};   // SOR: skip clipped samples and stop at the noise; .ALL (curved app scale) keeps the plain fit
   const n=km.length,d=km.slice(1).map((k,i)=>k-km[i]).sort((a,b)=>a-b),med=d.length?d[d.length>>1]:50;
   const L=km.map((k,s)=>{const x1=Math.min(end,s<n-1?km[s+1]:k+med)-em,x0=k+sk;return k<end&&x1>x0?spanFit(P,x0,x1):null});
-  return km.map((k,r)=>{const i=r?L[r-1]:null,o=L[r];if(!i||!o)return{};const a=i.at(k)+(R.absOff||0),b=o.at(k)+(R.absOff||0);return{inn:a,out:b,gain:b-a,slope:o.sl}});
+  return km.map((k,r)=>{const i=r?L[r-1]:null,o=L[r],ab=R.absOff||0,a=i?i.at(k)+ab:undefined,b=o?o.at(k)+ab:undefined;   // keep whatever can be measured: the first repeater has an output level but no input or gain
+    return{inn:a,out:b,gain:i&&o?b-a:undefined,slope:o?o.sl:undefined}});
 }
 function gtable(){
   const el=$('#gt'),S=S3;if(!S||!S.tab){el.innerHTML='';return}
   let h='<table><thead><tr><th rowspan="2">#</th><th rowspan="2">km</th>'+S.yl.map(l=>'<th colspan="4">'+l+'</th>').join('')+'</tr><tr>'+S.yl.map(()=>'<th>In</th><th>Out</th><th>Gain</th><th>dB/km</th>').join('')+'</tr></thead><tbody>';
-  S.km.forEach((k,r)=>{h+='<tr><td>'+(S.rev?S.L0-S.idx[r]:S.idx[r]+1)+(S.flg&&S.flg[r]?'~':'')+'</td><td>'+k.toFixed(1)+'</td>'+S.tab.map(g=>{const q=g[r];return q&&q.gain!=null?'<td>'+q.inn.toFixed(1)+'</td><td>'+q.out.toFixed(1)+'</td><td><b>'+q.gain.toFixed(2)+'</b></td><td>'+q.slope.toFixed(3)+'</td>':'<td colspan="4">–</td>'}).join('')+'</tr>'});
-  el.innerHTML='<h2 style="margin:14px 0 6px">Repeater gain estimate'+(S.rev?' <span class="k" style="font-weight:400">(numbered from the other end, following the baseline trace)</span>':'')+'</h2><div class="tbl" style="max-height:320px;overflow:auto">'+h+'</tbody></table></div><div class="sub" style="margin:6px 0 0">In and Out are the extrapolated span-loss lines at the repeater (dB, instrument scale). Gain = Out − In, ignoring any overshoot or reflection. dB/km is the slope of the following span. A ~ after a number marks a repeater inferred from the span length.</div>';
+  S.km.forEach((k,r)=>{h+='<tr><td>'+(S.rev?S.L0-S.idx[r]:S.idx[r]+1)+(S.flg&&S.flg[r]?(S.flg[r]===3?'+':'~'):'')+'</td><td>'+k.toFixed(1)+'</td>'+S.tab.map(g=>{const q=g[r];const f1=(v,d)=>v==null?'\u2013':v.toFixed(d);return q&&(q.out!=null||q.inn!=null)?'<td>'+f1(q.inn,1)+'</td><td>'+f1(q.out,1)+'</td><td><b>'+f1(q.gain,2)+'</b></td><td>'+f1(q.slope,3)+'</td>':'<td colspan="4">\u2013</td>'}).join('')+'</tr>'});
+  el.innerHTML='<h2 style="margin:14px 0 6px">Repeater gain estimate'+(S.rev?' <span class="k" style="font-weight:400">(numbered from the other end, following the baseline trace)</span>':'')+'</h2><div class="tbl" style="max-height:320px;overflow:auto">'+h+'</tbody></table></div><div class="sub" style="margin:6px 0 0">In and Out are the extrapolated span-loss lines at the repeater (dB, instrument scale). Gain = Out − In, ignoring any overshoot or reflection. dB/km is the slope of the following span. A ~ after a number marks a repeater inferred from the span length, and a + one added by hand.</div>';
 }
 function gridKm(ts,EI,lo,hi){const xe=Math.min(...ts.map(R=>EI.get(R)*R.dx)),x1=Math.min(hi,xe),x0=Math.min(lo,x1),dxm=Math.max(...ts.map(R=>R.dx));
   if(x1-x0<=0){const e=[];e.bw=0;return e}
@@ -552,17 +595,18 @@ function surf(){
   const full=$('#dt').value==='full',ref=ts.reduce((a,b)=>EI.get(b)*b.dx>EI.get(a)*a.dx?b:a),km0=full?gridKm(ts,EI,lo,hi):repeaters(ref,st,sp,EI.get(ref),$('#inf').checked);
   const gx=!full&&$('#gx').checked,sk=+$('#sk').value||4,G=gx?ts.map(R=>gains(R,km0,EI.get(R)*R.dx,sk)):null;
   let Z=ts.map((R,t)=>km0.map((k,r)=>full?binAt(R,k,km0.bw):gx?(G[t][r].gain==null?NaN:G[t][r].gain):k<=EI.get(R)*R.dx?peakAt(R,k,1.5,st):NaN));
-  const ok=km0.map((k,r)=>k>=lo&&k<=hi&&Z.filter(z=>isFinite(z[r])).length>=Math.min(2,ts.length)),km=km0.filter((k,r)=>ok[r]);Z=Z.map(z=>z.filter((v,r)=>ok[r]));const Gf=G&&G.map(g=>g.filter((v,r)=>ok[r]));
+  const ok=km0.map((k,r)=>k>=lo&&k<=hi&&(Z.filter(z=>isFinite(z[r])).length>=Math.min(2,ts.length)||(gx&&!full&&r===0))),km=km0.filter((k,r)=>ok[r]);Z=Z.map(z=>z.filter((v,r)=>ok[r]));const Gf=G&&G.map(g=>g.filter((v,r)=>ok[r]));
   const bi=Math.max(0,ts.indexOf(T[+$('#bs').value]));   // baseline trace chosen by the user
-  const spread=km.map((k,r)=>{const b=Z[bi][r],f=Z.map(z=>z[r]).filter(isFinite);return isFinite(b)?Math.max(...f.map(v=>Math.abs(v-b))):Math.max(...f)-Math.min(...f)});   // largest difference from the baseline at each distance (drives the colour)
+  const spread=km.map((k,r)=>{const b=Z[bi][r],f=Z.map(z=>z[r]).filter(isFinite);return !f.length?0:isFinite(b)?Math.max(...f.map(v=>Math.abs(v-b))):Math.max(...f)-Math.min(...f)});   // largest difference from the baseline at each distance (drives the colour)
   if(nrm)Z=Z.map(z=>{const f=z.filter(isFinite),m=f.reduce((s,v)=>s+v,0)/(f.length||1);return z.map(v=>v-m)});
   const diff=$('#md').value==='diff';if(diff)Z=Z.map(z=>z.map((v,r)=>v-Z[bi][r]));
 
   const uniq=new Set(ts.map(R=>R.fx.wl)).size===ts.length;
-  return{ts,km,Z,diff,full,bi,gx,tab:Gf,rev:!!ts[bi].rev,idx:km0.map((k,r)=>r).filter(r=>ok[r]),flg:km0.fl?km0.fl.filter((v,r)=>ok[r]):null,L0:km0.length,lm:lm?[lo,hi]:null,spr:spread,ya:ts.map((R,i)=>uniq?R.fx.wl:i),yl:ts.map((R,i)=>uniq?R.fx.wl.toFixed(2)+' nm':(R.fx.dt?new Date(R.fx.dt*1000).toISOString().slice(0,10):'#'+(i+1)))};
+  return{ts,km,Z,diff,full,bi,gx,rl:full?repeaters(ref,st,sp,EI.get(ref),$('#inf').checked):km0,tab:Gf,rev:!!ts[bi].rev,idx:km0.map((k,r)=>r).filter(r=>ok[r]),flg:km0.fl?km0.fl.filter((v,r)=>ok[r]):null,L0:km0.length,lm:lm?[lo,hi]:null,spr:spread,ya:ts.map((R,i)=>uniq?R.fx.wl:i),yl:ts.map((R,i)=>uniq?R.fx.wl.toFixed(2)+' nm':(R.fx.dt?new Date(R.fx.dt*1000).toISOString().slice(0,10):'#'+(i+1)))};
 }
 function refresh3d(){
   if(T.length<2){S3=null;return}
+  V3.z=null;
   S3=surf();const bt=S3.diff?S3.Z.map((z,t)=>{const f=z.filter(isFinite);return t===S3.bi||!f.length?null:S3.yl[t]+' − '+S3.yl[S3.bi]+': mean '+(f.reduce((s,v)=>s+v,0)/f.length).toFixed(1)+' dB ('+Math.min(...f).toFixed(1)+' to '+Math.max(...f).toFixed(1)+')'}).filter(Boolean):[];
   $('#i3').textContent=(S3.lm?'Markers A–B: '+S3.lm[0].toFixed(2)+'–'+S3.lm[1].toFixed(2)+' km · ':'')+($('#lm').checked&&!S3.lm?'Set markers A and B on the Trace tab first · ':'')+S3.km.length+(S3.full?' bins, entire trace':S3.gx?' repeaters, gain from span-loss extrapolation':' repeaters')+' \u00b7 '+S3.ts.map(R=>R.fx.wl?R.fx.wl+' nm ('+(299792.458/R.fx.wl).toFixed(2)+' THz)':R.name).join(' \u00b7 ');
   if(bt.length)$('#i3').textContent+=' · Δ '+bt.join(' · ');
@@ -575,10 +619,11 @@ function draw3d(){
   const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.font='11px system-ui,sans-serif';
   const cs=getComputedStyle(document.documentElement),col=n=>cs.getPropertyValue(n).trim();
   const {ts,km,Z,ya,yl,spr,bi}=S3||{km:[],ts:[]};
-  if(km.length<2||ts.length<2){g.fillStyle=col('--muted');g.fillText('Nothing to plot: need at least 2 traces with repeaters in range. Lower the minimum step, widen the marker range, or switch Data to Entire trace.',16,28);return}
+  if(km.length<2||ts.length<2){$('#z3').hidden=true;g.fillStyle=col('--muted');g.fillText('Nothing to plot: need at least 2 traces with repeaters in range. Lower the minimum step, widen the marker range, or switch Data to Entire trace.',16,28);return}
   const fin=Z.flat().filter(isFinite),mab=Math.max(...fin.map(Math.abs))||1,zmin=S3.diff?-mab:Math.min(...fin),zmax=S3.diff?mab:Math.max(...fin),zs=zmax-zmin||1;
   const x0=km[0],x1=km[km.length-1],y0=ya[0],y1=ya[ya.length-1],XS=1.5,YS=.8,ZS=.6;
-  const nx=v=>(v-x0)/((x1-x0)||1)*2-1,ny=v=>(v-y0)/((y1-y0)||1)*2-1,nz=v=>(v-zmin)/zs*2-1;
+  const zlo=V3.z?V3.z[0]:zmin,zhi=V3.z?V3.z[1]:zmax,zsv=(zhi-zlo)||1;S3.zg={lo:zlo,hi:zhi,flo:zmin,fhi:zmax};
+  const nx=v=>(v-x0)/((x1-x0)||1)*2-1,ny=v=>(v-y0)/((y1-y0)||1)*2-1,nz=v=>Math.max(-1,Math.min(1,(v-zlo)/zsv*2-1));   // values outside a zoomed range are clamped to the box
   const ca=Math.cos(V3.az),sa=Math.sin(V3.az),ce=Math.cos(V3.el),se=Math.sin(V3.el);
   const S=Math.min(b.width/4.6,b.height/2.9)*V3.zoom,cx=b.width/2,cy=b.height/2+12;
   const P=(x,y,z)=>{x*=XS;y*=YS;z*=ZS;const a=x*ca-y*sa,d=x*sa+y*ca;return[cx+a*S,cy-(z*ce+d*se)*S,d*ce-z*se]};
@@ -591,6 +636,7 @@ function draw3d(){
     const p=[P(nx(km[r]),ny(ya[t]),nz(zz[0])),P(nx(km[r+1]),ny(ya[t]),nz(zz[1])),P(nx(km[r+1]),ny(ya[t+1]),nz(zz[2])),P(nx(km[r]),ny(ya[t+1]),nz(zz[3]))];
     Q.push({p,d:p.reduce((s,q)=>s+q[2],0)/4,u:Math.max(0,Math.min(1,((spr[r]+spr[r+1])/2-gl)/(rl-gl)))});
   }
+  Z[0].forEach((_,r)=>{if(Z.every(z=>!isFinite(z[r]))){g.save();g.setLineDash([3,4]);g.strokeStyle=col('--muted');g.lineWidth=1;const a=P(nx(km[r]),-1,-1),b=P(nx(km[r]),1,-1);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();g.restore()}});   // repeaters with nothing measurable (such as the first) are shown as dashed lines on the floor
   Q.sort((a,b)=>b.d-a.d);g.lineWidth=.6;g.strokeStyle=col('--card');
   const dense=km.length>200;for(const q of Q){path(q.p,1);g.fillStyle=cm(q.u);g.fill();if(dense)g.strokeStyle=g.fillStyle;g.stroke()}
   g.strokeStyle=col('--fg');g.lineWidth=1.3;
@@ -604,11 +650,14 @@ function draw3d(){
   g.fillStyle=col('--muted');g.textAlign='center';
   const ey=P(0,-1,-1)[1]>P(0,1,-1)[1]?-1:1,ex=P(-1,0,-1)[1]>P(1,0,-1)[1]?-1:1;
   for(let i=0;i<=4;i++){const v=x0+(x1-x0)*i/4,p=P(nx(v),ey,-1);g.fillText(v.toFixed(0),p[0],p[1]+14)}
-  {const p=P(0,ey,-1);g.fillText('Distance (km)',p[0],p[1]+30)}
+  if($('#rn').checked&&S3.rl&&S3.rl.length){const rl2=S3.rl,Ln=rl2.length,st2=Math.max(1,Math.ceil(Ln/24));g.save();g.font='10px system-ui,sans-serif';g.fillStyle=g.strokeStyle=col('--accent');g.textAlign='center';g.lineWidth=1;
+    rl2.forEach((k,i)=>{if(k<x0||k>x1)return;const p=P(nx(k),ey,-1);g.beginPath();g.moveTo(p[0],p[1]+1);g.lineTo(p[0],p[1]+6);g.stroke();if(i%st2===0)g.fillText(S3.rev?Ln-i:i+1,p[0],p[1]+28)});g.restore()}
+  {const p=P(0,ey,-1);g.fillText('Distance (km)'+($('#rn').checked?' \u00b7 repeater numbers':''),p[0],p[1]+46)}
   ts.forEach((R,t)=>{const p=P(ex,ny(ya[t]),-1),r=p[0]>cx;g.textAlign=r?'left':'right';g.fillText(yl[t],p[0]+(r?8:-8),p[1]+4)});
   {const p=P(ex,0,-1),r=p[0]>cx;g.textAlign=r?'left':'right';g.fillText('Wavelength',p[0]+(r?8:-8),p[1]+20)}
   const zc=cn.reduce((a,q)=>P(q[0],q[1],-1)[0]<P(a[0],a[1],-1)[0]?q:a);g.textAlign='right';
-  for(let i=0;i<=4;i++){const v=zmin+zs*i/4,p=P(zc[0],zc[1],nz(v));g.fillText(v.toFixed(1),p[0]-6,p[1]+4)}
+  for(let i=0;i<=4;i++){const v=zlo+zsv*i/4,p=P(zc[0],zc[1],nz(v));g.fillText(v.toFixed(1),p[0]-6,p[1]+4)}
+  {const zb=$('#z3'),zw=$('#z3w').style,sp=zmax-zmin||1,cl=v=>Math.max(0,Math.min(100,v));zb.hidden=false;zw.top=cl((zmax-zhi)/sp*100)+'%';zw.height=Math.max(0,cl((zmax-zlo)/sp*100)-cl((zmax-zhi)/sp*100))+'%'}
   const bx=16,by=14,bw=120;for(let i=0;i<bw;i++){g.fillStyle=cm(i/bw);g.fillRect(bx+i,by,1,8)}
   g.fillStyle=col('--muted');g.textAlign='left';g.fillText('≤'+gl+' dB',bx,by+22);g.textAlign='right';g.fillText('≥'+rl+' dB',bx+bw,by+22);
   g.textAlign='left';g.fillText('Colour = difference from baseline ('+yl[bi]+')',bx+bw+10,by+9);g.fillText('Height = '+(S3.diff?(S3.gx?'gain difference vs ':'difference vs ')+yl[bi]:S3.gx?($('#nrm').checked?'gain vs trace mean':'repeater gain step'):$('#nrm').checked?'level vs trace mean':'level (absolute)')+' (dB)',bx,by+38);
@@ -619,7 +668,7 @@ const SGCOL=['#4fc3f7','#ffb74d','#81c784','#ba68c8','#e57373','#90a4ae','#f0629
 const sgName=R=>{const d=R.fx.dt?new Date(R.fx.dt*1000).toISOString().slice(0,10):'';return R.name.replace(/\.[^.]+$/,'').slice(0,26)+(d?' ('+d+')':'')};
 function sigCompute(){   // per trace and repeater: the filter plateau level and the output level (extrapolated span line); cached until the traces or detection settings change
   const st=+$('#stp').value||4,sp=+$('#spc').value||15,sk=+$('#sk').value||4,inf=$('#inf').checked;
-  const ts=T.slice().sort((a,b)=>(a.fx.dt||0)-(b.fx.dt||0)),key=ts.map(R=>R.name).join('|')+'|'+st+'|'+sp+'|'+sk+'|'+inf;
+  const ts=T.slice().sort((a,b)=>(a.fx.dt||0)-(b.fx.dt||0)),key=ts.map(R=>R.name).join('|')+'|'+st+'|'+sp+'|'+sk+'|'+inf+'|'+MAN.v;
   if(SGraw&&SGkey===key)return SGraw;
   const EI=new Map(ts.map(R=>[R,sigEnd(R)])),ref=ts.reduce((a,b)=>EI.get(b)*b.dx>EI.get(a)*a.dx?b:a),km=repeaters(ref,st,sp,EI.get(ref),inf),P=[],O=[],hasPl=[];
   ts.forEach(R=>{
@@ -634,7 +683,7 @@ function sigCompute(){   // per trace and repeater: the filter plateau level and
 function sigRender(){
   if(!SGraw)return;
   const {ts,km,P,O,hasPl}=SGraw,nF=km.length,chg=$('#sw').value==='chg',thr=+$('#sth').value||0.5,usePw=$('#spw').checked;
-  const bi=Math.max(0,ts.indexOf(T[+$('#sbs').value])),use=$('#sm').value==='auto'?(hasPl[bi]?'plateau':'out'):$('#sm').value,pwb=ts[bi].fx.pw&&ts[bi].fx.pw[0];
+  const bi=Math.max(0,ts.indexOf(T[+$('#sbs').value])),use=$('#sm').value,pwb=ts[bi].fx.pw&&ts[bi].fx.pw[0];
   const LG=ts.map((R,t)=>{const adj=use==='out'&&usePw&&pwb&&R.fx.pw&&R.fx.pw[0]?10*Math.log10(pwb/R.fx.pw[0]):0;return(use==='plateau'?P[t]:O[t]).map(v=>v+adj)});
   const DLG=LG.map(a=>a.map((v,r)=>r&&isFinite(v)&&isFinite(a[r-1])?v-a[r-1]:NaN));   // differential loop gain = this repeater minus the previous one (worked out on the full list)
   const F1=chg?LG.map(a=>a.map((v,r)=>v-LG[bi][r])):LG,F2=chg?DLG.map(a=>a.map((v,r)=>v-DLG[bi][r])):DLG,rev=!!ts[bi].rev;
@@ -648,15 +697,15 @@ function sigRender(){
   if(use==='plateau')ts.forEach((R,t)=>{if(!hasPl[t])warn.push(sgName(R)+' has no filter plateau, so its values are not comparable')});
   if(use==='out'&&usePw&&ts.some(R=>R.fx.pw&&pwb&&Math.abs(R.fx.pw[0]/pwb-1)>.05))warn.push('levels normalised for pulse width');
   if(new Set(ts.map(R=>!!R.rev)).size>1)warn.push('traces are from different ends: numbering follows the baseline, distances are not mirrored');
-  $('#i4').textContent=n+' repeaters'+(lm?' (markers A\u2013B, '+lo.toFixed(1)+'\u2013'+hi.toFixed(1)+' km)':'')+($('#slm').checked&&!lm?' \u00b7 set markers A and B on the Trace tab first':'')+' \u00b7 measure: '+(use==='plateau'?'filter plateau (HLLB reflection)':'output level after the repeater')+' \u00b7 baseline: '+sgName(ts[bi])+(rev?' \u00b7 numbered from the far end':'')+(warn.length?' \u00b7 '+warn.join(' \u00b7 '):'');
+  $('#i4').textContent=n+' repeaters'+(lm?' (markers A\u2013B, '+lo.toFixed(1)+'\u2013'+hi.toFixed(1)+' km)':'')+($('#slm').checked&&!lm?' \u00b7 set markers A and B on the Trace tab first':'')+' \u00b7 measure: '+(use==='plateau'?'HLLB reflection peak (a reflection, not a gain)':'Rayleigh level after the repeater')+' \u00b7 baseline: '+sgName(ts[bi])+(rev?' \u00b7 numbered from the far end':'')+(warn.length?' \u00b7 '+warn.join(' \u00b7 '):'');
   sigTable();drawSig();
 }
 function sigTable(){
   const S=SG,f=v=>isFinite(v)?v.toFixed(2):'\u2013';
-  let h='<table><thead><tr><th rowspan="2">#</th><th rowspan="2">km</th>'+S.names.map((nm,t)=>'<th colspan="2" style="color:'+SGCOL[t%8]+'">'+nm+(t===S.bi?' (baseline)':'')+'</th>').join('')+'</tr><tr>'+S.names.map(()=>'<th>'+(S.chg?'\u0394 loop':'Loop')+'</th><th>'+(S.chg?'\u0394 diff':'Diff')+'</th>').join('')+'</tr></thead><tbody>';
+  let h='<table><thead><tr><th rowspan="2">#</th><th rowspan="2">km</th>'+S.names.map((nm,t)=>'<th colspan="2" style="color:'+SGCOL[t%8]+'">'+nm+(t===S.bi?' (baseline)':'')+'</th>').join('')+'</tr><tr>'+S.names.map(()=>'<th>'+(S.chg?'\u0394 loop gain':'Loop gain')+'</th><th>'+(S.chg?'Span loss dev.':'Span gain/loss')+'</th>').join('')+'</tr></thead><tbody>';
   for(let r=0;r<S.n;r++){const flag=S.chg&&S.ts.some((R,t)=>t!==S.bi&&Math.abs(S.s2[t][r])>S.thr);
-    h+='<tr'+(flag?' class="flag"':'')+'><td>'+S.lab(r)+(S.fl&&S.fl[r]?'~':'')+'</td><td>'+S.km[r].toFixed(1)+'</td>'+S.ts.map((R,t)=>'<td>'+f(S.s1[t][r])+'</td><td><b>'+f(S.s2[t][r])+'</b></td>').join('')+'</tr>'}
-  $('#sgt').innerHTML='<h2 style="margin:14px 0 6px">Per-repeater values</h2><div class="tbl" style="max-height:340px;overflow:auto">'+h+'</tbody></table></div><div class="sub" style="margin:6px 0 0">Loop gain is the level measured at each repeater; differential loop gain is the difference from the previous repeater (dB). In change mode both are relative to the baseline trace, and rows are shaded where the differential change exceeds the flag level. A ~ marks a repeater inferred from the span length.</div>';
+    h+='<tr'+(flag?' class="flag"':'')+'><td>'+S.lab(r)+(S.fl&&S.fl[r]?(S.fl[r]===3?'+':'~'):'')+'</td><td>'+S.km[r].toFixed(1)+'</td>'+S.ts.map((R,t)=>'<td>'+f(S.s1[t][r])+'</td><td><b>'+f(S.s2[t][r])+'</b></td>').join('')+'</tr>'}
+  $('#sgt').innerHTML='<h2 style="margin:14px 0 6px">Per-repeater values</h2><div class="tbl" style="max-height:340px;overflow:auto">'+h+'</tbody></table></div><div class="sub" style="margin:6px 0 0">Loop gain is the Rayleigh level just after each repeater (dB). Span gain/loss is the difference from the previous repeater, that is the repeater gain minus the span loss between them. Span loss deviation is that difference minus the same difference in the baseline trace: a positive value means more gain (less loss) than the baseline. Rows are shaded where the deviation exceeds the flag level. A ~ marks a repeater inferred from the span length, and a + one added by hand.</div>';
 }
 function drawSig(){
   const c=$('#sgc'),b=c.getBoundingClientRect(),dpr=devicePixelRatio||1;c.width=b.width*dpr;c.height=b.height*dpr;
@@ -668,7 +717,7 @@ function drawSig(){
   S.m={l:m.l,pw,a:xa,b:xb};S.geo=[];
   let lx=m.l;g.textAlign='left';S.ts.forEach((R,t)=>{g.fillStyle=SGCOL[t%8];g.fillRect(lx,9,14,4);g.fillStyle=col('--fg');const tx=S.names[t]+(t===S.bi?' (baseline)':'');g.fillText(tx,lx+19,14);lx+=g.measureText(tx).width+38});
   const r0=Math.max(0,Math.floor(xa)-1),r1=Math.min(full,Math.ceil(xb)+1),cl=v=>Math.max(0,Math.min(100,v));
-  [[m.t,S.s1,S.chg?'Change in loop gain (dB)':'Loop gain (dB)',0],[m.t+ph+gap,S.s2,S.chg?'Change in differential loop gain (dB)':'Differential loop gain (dB)',1]].forEach(([y0,A,title,pi])=>{
+  [[m.t,S.s1,S.chg?'Loop gain deviation (dB)':'Loop gain (dB)',0],[m.t+ph+gap,S.s2,S.chg?'Span loss deviation (dB)':'Span gain / loss (dB)',1]].forEach(([y0,A,title,pi])=>{
     let flo=1e9,fhi=-1e9,vlo=1e9,vhi=-1e9;
     A.forEach(a=>a.forEach((v,r)=>{if(!isFinite(v))return;if(v<flo)flo=v;if(v>fhi)fhi=v;if(r>=xa-.5&&r<=xb+.5){if(v<vlo)vlo=v;if(v>vhi)vhi=v}}));
     if(S.chg||pi===1){flo=Math.min(flo,0);fhi=Math.max(fhi,0);vlo=Math.min(vlo,0);vhi=Math.max(vhi,0)}
@@ -704,7 +753,7 @@ function tabsUI(){$('#t2').hidden=$('#t4').hidden=!T.length;$('#t3').hidden=T.le
   c.addEventListener('pointermove',e=>{if(!SG||SG.n<2||!SG.m)return;const bx=c.getBoundingClientRect(),px=e.clientX-bx.left,M2=SG.m,r=Math.round(M2.a+(px-M2.l)/M2.pw*(M2.b-M2.a));
     if(r<0||r>=SG.n||px<M2.l||px>M2.l+M2.pw){SGh=-1;$('#sgtip').hidden=true;drawSig();return}
     SGh=r;drawSig();const tip=$('#sgtip');
-    tip.innerHTML='<b>Repeater '+SG.lab(r)+(SG.fl&&SG.fl[r]?'~':'')+'</b> <span class="k">'+SG.km[r].toFixed(1)+' km</span>'+SG.ts.map((R,t)=>'<br><span style="color:'+SGCOL[t%8]+'">\u25CF</span> '+SG.names[t]+': '+fm(SG.s1[t][r])+' / '+fm(SG.s2[t][r])).join('')+'<br><span class="k">'+(SG.chg?'change in loop / differential':'loop / differential')+', dB</span>';
+    tip.innerHTML='<b>Repeater '+SG.lab(r)+(SG.fl&&SG.fl[r]?(SG.fl[r]===3?'+':'~'):'')+'</b> <span class="k">'+SG.km[r].toFixed(1)+' km</span>'+SG.ts.map((R,t)=>'<br><span style="color:'+SGCOL[t%8]+'">\u25CF</span> '+SG.names[t]+': '+fm(SG.s1[t][r])+' / '+fm(SG.s2[t][r])).join('')+'<br><span class="k">'+(SG.chg?'loop gain deviation / span loss deviation':'loop gain / span gain-loss')+', dB</span>';
     tip.hidden=false;tip.style.left=Math.max(4,Math.min(px+14,c.clientWidth-tip.offsetWidth-4))+'px';tip.style.top='38px'});
   c.addEventListener('pointerleave',()=>{SGh=-1;$('#sgtip').hidden=true;if(SG)drawSig()});
   c.addEventListener('wheel',e=>{if(!SG||SG.n<3||!SG.m)return;e.preventDefault();   // scroll to zoom the repeater range around the pointer
@@ -738,12 +787,13 @@ function setMode(m){
 async function loadFiles(files,add){
   const fl=[...files];if(!fl.length)return;
   const out=add?T.slice():[];$('#err').textContent='';
+  const added=[];
   for(const f of fl){if(out.length>=8)break;
-    try{const R=parseAny(await f.arrayBuffer());R.name=f.name;out.push(R)}catch(e){$('#err').textContent+='Could not read '+f.name+': '+e.message+'  '}}
-  if(!out.length)return;T=out;
+    try{const R=parseAny(await f.arrayBuffer());R.name=f.name;out.push(R);added.push(R)}catch(e){$('#err').textContent+='Could not read '+f.name+': '+e.message+'  '}}
+  if(!out.length)return;out.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}));T=out;   // lists are kept in alphabetical order
   $('#sel').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+R.name.replace(/[<&"]/g,'')+(R.fx.wl?' ('+R.fx.wl+' nm)':'')+'</option>').join('');
   $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;tabsUI();$('#rm').hidden=false;
-  const last=T[T.length-1];$('#sel').value=T.length-1;show(last,last.name);
+  const last=added.length?added[added.length-1]:T[T.length-1];$('#sel').value=T.indexOf(last);show(last,last.name);
   const lo=T.reduce((a,R,i)=>R.fx.wl<T[a].fx.wl||R.fx.wl===T[a].fx.wl&&R.fx.dt<T[a].fx.dt?i:a,0);$('#bs').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+(R.fx.wl?R.fx.wl+' nm – ':'')+R.name.replace(/[<&"]/g,'')+'</option>').join('');$('#bs').value=lo;$('#sbs').innerHTML=$('#bs').innerHTML;$('#sbs').value=lo;
   $('#md').value=T.length===2?'diff':'abs';$('#nrm').checked=T.length!==2&&!$('#gx').checked;
   if(T.length<2&&mode==='3d')mode='2d';setMode(mode);
@@ -770,16 +820,25 @@ function removeTrace(){   // take the trace on screen out of the session
 }
 $('#rm').onclick=removeTrace;
 $('#t2').onclick=()=>setMode('2d');$('#t3').onclick=()=>setMode('3d');$('#t4').onclick=()=>setMode('sig');
-['stp','spc','nrm','md','dt','gl','rl','bs','sk','lm','inf'].forEach(id=>$('#'+id).addEventListener('input',refresh3d));
+['stp','spc','nrm','md','dt','gl','rl','bs','sk','lm','inf','rn'].forEach(id=>$('#'+id).addEventListener('input',refresh3d));
 $('#md').addEventListener('change',()=>{$('#nrm').checked=$('#md').value!=='diff'&&!$('#gx').checked;refresh3d()});
 $('#gx').addEventListener('change',()=>{if($('#gx').checked)$('#nrm').checked=false;refresh3d()});
-$('#r3').onclick=()=>{V3={az:-.9,el:.55,zoom:1};draw3d()};
+$('#r3').onclick=()=>{V3={az:-.9,el:.55,zoom:1,z:null};draw3d()};
 {const c=$('#c3');let dr=null;
   c.addEventListener('pointerdown',e=>{c.setPointerCapture(e.pointerId);dr={x:e.clientX,y:e.clientY,az:V3.az,el:V3.el}});
   c.addEventListener('pointermove',e=>{if(!dr)return;V3.az=dr.az+(e.clientX-dr.x)*.008;V3.el=Math.max(-.2,Math.min(1.5,dr.el+(e.clientY-dr.y)*.008));draw3d()});
   c.addEventListener('pointerup',()=>dr=null);
   c.addEventListener('wheel',e=>{e.preventDefault();V3.zoom=Math.max(.4,Math.min(4,V3.zoom*(e.deltaY>0?.9:1.1)));draw3d()},{passive:false});
   new ResizeObserver(()=>{if(mode==='3d'&&S3)draw3d()}).observe(c);}
+
+barDrag($('#z3'),(e,r)=>{const gp=S3&&S3.zg;if(!gp)return{mode:'none'};
+  const span=gp.fhi-gp.flo,k=span/r.height,h=e.target.classList;let mode=h.contains('t')?'t':h.contains('b')?'b':e.target===$('#z3w')?'pan':'jump',lo=gp.lo,hi=gp.hi;
+  if(mode==='jump'){const cc=gp.fhi-(e.clientY-r.top)*k,w=hi-lo;lo=cc-w/2;hi=cc+w/2;V3.z=[lo,hi];draw3d();mode='pan'}
+  return{mode,k,span,lo,hi,cy:e.clientY};
+},(e,s)=>{if(!s||s.mode==='none')return;const d=-(e.clientY-s.cy)*s.k,ms=s.span*.02;let lo=s.lo,hi=s.hi;
+  if(s.mode==='pan'){lo+=d;hi+=d}else if(s.mode==='t')hi=Math.max(lo+ms,hi+d);else lo=Math.min(hi-ms,lo+d);
+  V3.z=[lo,hi];draw3d()});
+$('#z3').addEventListener('dblclick',()=>{V3.z=null;draw3d()});
 
 /* ---------- file loading ---------- */
 async function loadFile(f){
