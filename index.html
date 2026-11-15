@@ -1,7 +1,18 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!--
+  SOR - ALL / C-OTDR Trace Viewer
+  Copyright (c) 2026 Paul Lomas. All rights reserved.
+  Developer and copyright owner: Paul Lomas.
+  Use is subject to the licence terms and the No Warranty / Limitation of Liability
+  disclaimer shown in the application (Licence · Disclaimer · About).
+  Sharing is permitted only if the software is unmodified and this notice remains intact.
+-->
+<meta name="author" content="Paul Lomas">
+<meta name="copyright" content="Copyright 2026 Paul Lomas. All rights reserved.">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SOR - ALL / C-OTDR Trace Viewer</title>
 <style>
@@ -59,12 +70,25 @@ input[type=number],select{font:inherit;background:var(--card);color:var(--fg);bo
 .bar label{display:inline-flex;gap:6px;align-items:center}
 label.btn{display:inline-flex}
 h2{font-size:15px;margin:0 0 10px}
+.lnk{background:none;border:none;padding:0 2px;color:var(--accent);text-decoration:underline;cursor:pointer;font-size:inherit}
+#ft{margin:22px 0 10px;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+#lic{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
+#lic.on{display:flex}
+.lic-card{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;max-width:760px;width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.lic-card h2{margin:0;padding:14px 18px 8px;font-size:17px}
+.lic-body{overflow:auto;padding:0 18px 10px;font-size:13px;line-height:1.5}
+.lic-body h3{font-size:14px;margin:16px 0 6px}
+.lic-body table{border-collapse:collapse;width:100%}
+.lic-body td,.lic-body th{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+.lic-body th{background:var(--bg)}
+.lic-bar{padding:10px 18px 14px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+button:disabled{opacity:.45;cursor:not-allowed}
 </style>
 </head>
 <body>
 <main>
 <h1>SOR - ALL / C-OTDR Trace Viewer</h1>
-<p class="sub">Telcordia SR-4731 (SOR v1 &amp; v2) and Advantest/Anritsu Q8492 .ALL files. Files are read locally in your browser and never uploaded. <span id="bld" style="white-space:nowrap;margin-left:6px"></span></p>
+<p class="sub">Telcordia SR-4731 (SOR v1 &amp; v2) and Advantest/Anritsu Q8492 .ALL files. Files are read locally in your browser and never uploaded. <span id="bld" style="white-space:nowrap;margin-left:6px"></span> <button class="lnk" id="hdrAbout" type="button">Licence · Disclaimer · About</button></p>
 
 <div class="card">
   <div class="bar">
@@ -136,12 +160,62 @@ h2{font-size:15px;margin:0 0 10px}
     <div class="card"><h2>Instrument &amp; link</h2><dl id="m2"></dl></div>
   </div>
 </div>
+<div id="ft"><span>&copy; 2026 Paul Lomas. All rights reserved.</span>
+<button class="lnk" id="ftLic" type="button">Licence</button>
+<button class="lnk" id="ftDis" type="button">Disclaimer</button>
+<button class="lnk" id="ftAbout" type="button">About</button></div>
 </main>
+<div id="lic" role="dialog" aria-modal="true" aria-labelledby="lic-title"><div class="lic-card">
+<h2 id="lic-title">Copyright, Licence &amp; Disclaimer</h2>
+<div class="lic-body" id="lic-body">
+<h3 id="lic-sec-copy">Copyright</h3>
+<p>SOR - ALL / C-OTDR Trace Viewer<br>&copy; 2026 Paul Lomas. All rights reserved.<br>Developer and copyright owner: Paul Lomas.</p>
+<h3 id="lic-sec-licence">Software licence</h3>
+<table><tr><th>Type of use</th><th>Permission / terms</th></tr>
+<tr><td>Personal use</td><td>Free</td></tr>
+<tr><td>Testing and evaluation</td><td>Free</td></tr>
+<tr><td>Individual engineers using it at work</td><td>Free</td></tr>
+<tr><td>Internal use by subsea cable operators</td><td>Free, with acknowledgement</td></tr>
+<tr><td>Sharing with colleagues</td><td>Permitted, provided the software remains unmodified and the copyright notice stays intact</td></tr>
+<tr><td>Extensive enterprise deployment</td><td>Discuss a contribution or commercial licence</td></tr>
+<tr><td>Modification or integration into another application</td><td>Written permission required</td></tr>
+<tr><td>Incorporation into a commercial product</td><td>Commercial licence and agreed payment</td></tr>
+<tr><td>Reselling or redistribution as someone else's product</td><td>Not permitted without written permission</td></tr></table>
+<h3 id="lic-sec-disclaimer">Disclaimer &ndash; No Warranty and Limitation of Liability</h3>
+<p>This software is provided &quot;AS IS&quot; and &quot;AS AVAILABLE&quot;, without warranties or guarantees of any kind, whether express, implied or statutory.</p>
+<p>The developer makes no representation or warranty regarding the accuracy, completeness, reliability or suitability of any results, measurements, calculations, analysis or interpretations produced by the software.</p>
+<p>The software is provided as an engineering aid only.</p>
+<p>It is the user's sole responsibility to independently verify all results and interpretations before using them for operational, maintenance, fault-location, repair, planning or other engineering decisions.</p>
+<p>The developer accepts no responsibility or liability for:</p>
+<ul><li>Incorrect, inaccurate or misleading results or interpretations.</li>
+<li>Errors arising from software operation, processing, calculations or data conversion.</li>
+<li>Loss, corruption or misinterpretation of trace files or other data.</li>
+<li>Decisions, actions or consequences arising from the use of the software or reliance on its output.</li>
+<li>Direct, indirect, incidental, consequential or financial loss arising from its use or inability to use it.</li></ul>
+<p>Use of this software is entirely at the user's own risk. The user assumes full responsibility for validating the software's output and determining its suitability for any particular application.</p>
+<p>To the maximum extent permitted by applicable law, the developer excludes all liability arising from the use of this software.</p>
+<p>Nothing in this disclaimer excludes, restricts or modifies any rights or liabilities that cannot legally be excluded under applicable law.</p>
+<h3 id="lic-sec-about">About</h3>
+<table><tr><td>Application</td><td id="ab-app"></td></tr><tr><td>Version</td><td id="ab-ver"></td></tr>
+<tr><td>Developer</td><td>Paul Lomas</td></tr><tr><td>Copyright</td><td>&copy; 2026 Paul Lomas. All rights reserved.</td></tr>
+<tr><td>Development</td><td>Developed with the assistance of Claude, an AI model by Anthropic.</td></tr>
+<tr><td>Licence text version</td><td id="ab-lv"></td></tr>
+<tr><td>Privacy</td><td>Trace files are processed locally in your browser and are never uploaded.</td></tr></table>
+</div>
+<div class="lic-bar" id="lic-gate">
+<label><input type="checkbox" id="lic-ack"> I have read and accept the licence terms and the disclaimer.</label>
+<button class="primary" id="lic-ok" type="button" disabled>Accept and continue</button>
+<button id="lic-no" type="button">Decline</button>
+<span id="lic-msg" style="color:var(--refl)"></span></div>
+<div class="lic-bar" id="lic-viewbar" style="display:none"><span style="color:var(--muted)">You accepted these terms on this device.</span><button id="lic-close" type="button">Close</button></div>
+</div></div>
 
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'012',date:'2026-11-05'};   // increment n on every change
-$('#bld').textContent='Build '+BUILD.n+' \u00b7 '+BUILD.date;
+const BUILD={n:'013',date:'2026-11-15'};   // increment n on every change (Build 013: licence, disclaimer, attribution)
+const APP={name:'SOR - ALL / C-OTDR Trace Viewer',developer:'Paul Lomas',year:2026,assist:'Developed with the assistance of Claude, an AI model by Anthropic.',licVer:'1'};
+console.info(APP.name+' · Build '+BUILD.n+' · © '+APP.year+' '+APP.developer+'. All rights reserved.');
+$('#bld').textContent='Build '+BUILD.n+' · '+BUILD.date+' · © '+APP.year+' '+APP.developer;
 const C=299792458;
 let D=null,V={x0:0,x1:1,cx:null};
 
@@ -785,6 +859,7 @@ function setMode(m){
   if(m==='3d')refresh3d();else if(m==='sig')refreshSig();else if(D)draw();
 }
 async function loadFiles(files,add){
+  if(!LIC.ok){licShow('gate');return}
   const fl=[...files];if(!fl.length)return;
   const out=add?T.slice():[];$('#err').textContent='';
   const added=[];
@@ -840,6 +915,33 @@ barDrag($('#z3'),(e,r)=>{const gp=S3&&S3.zg;if(!gp)return{mode:'none'};
   V3.z=[lo,hi];draw3d()});
 $('#z3').addEventListener('dblclick',()=>{V3.z=null;draw3d()});
 
+/* ---------- copyright / licence / disclaimer ---------- */
+const LIC={ok:false,mode:'gate',key:'cotdr-viewer-licence'};
+function licShow(mode,sec){
+  LIC.mode=mode;$('#ab-app').textContent=APP.name;$('#ab-ver').textContent='Build '+BUILD.n+' ('+BUILD.date+')';$('#ab-lv').textContent=APP.licVer;
+  $('#lic-gate').style.display=mode==='gate'?'':'none';$('#lic-viewbar').style.display=mode==='gate'?'none':'';
+  $('#lic-msg').textContent='';$('#lic').classList.add('on');
+  const m=document.querySelector('main');if(m)m.inert=true;
+  const b=$('#lic-body');b.scrollTop=0;
+  if(sec){const e=document.getElementById('lic-sec-'+sec);if(e)b.scrollTop=e.offsetTop-b.offsetTop-6}
+  (mode==='gate'?$('#lic-ack'):$('#lic-close')).focus();
+}
+function licHide(){$('#lic').classList.remove('on');const m=document.querySelector('main');if(m)m.inert=false}
+function licInit(){
+  try{LIC.ok=localStorage.getItem(LIC.key)===APP.licVer}catch(e){LIC.ok=false}
+  if(!LIC.ok)licShow('gate');
+}
+$('#lic-ack').addEventListener('change',e=>{$('#lic-ok').disabled=!e.target.checked});
+$('#lic-ok').addEventListener('click',()=>{if(!$('#lic-ack').checked)return;LIC.ok=true;try{localStorage.setItem(LIC.key,APP.licVer)}catch(e){}licHide()});
+$('#lic-no').addEventListener('click',()=>{$('#lic-msg').textContent='You must accept the licence and disclaimer to use this software. Close this tab if you do not agree.'});
+$('#lic-close').addEventListener('click',licHide);
+$('#hdrAbout').addEventListener('click',()=>licShow(LIC.ok?'view':'gate','about'));
+$('#ftLic').addEventListener('click',()=>licShow(LIC.ok?'view':'gate','licence'));
+$('#ftDis').addEventListener('click',()=>licShow(LIC.ok?'view':'gate','disclaimer'));
+$('#ftAbout').addEventListener('click',()=>licShow(LIC.ok?'view':'gate','about'));
+addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#lic').classList.contains('on')&&LIC.mode==='view')licHide()});
+licInit();
+
 /* ---------- file loading ---------- */
 async function loadFile(f){
   try{const R=parseAny(await f.arrayBuffer());show(R,f.name)}
@@ -853,3 +955,5 @@ addEventListener('drop',e=>{e.preventDefault();document.body.classList.remove('d
 </script>
 </body>
 </html>
+
+</body></html>
