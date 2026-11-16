@@ -88,22 +88,22 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <body>
 <main>
 <h1>SOR - ALL / C-OTDR Trace Viewer</h1>
-<p class="sub">Telcordia SR-4731 (SOR v1 &amp; v2) and Advantest/Anritsu Q8492 .ALL files. Files are read locally in your browser and never uploaded. <span id="bld" style="white-space:nowrap;margin-left:6px"></span> <button class="lnk" id="hdrAbout" type="button">Licence · Disclaimer · About</button></p>
+<p class="sub">Telcordia SR-4731 (SOR v1 &amp; v2) and Advantest/Anritsu Q8492 .ALL files, and saved sessions (.cotdr.zip). Files are read locally in your browser and never uploaded. <span id="bld" style="white-space:nowrap;margin-left:6px"></span> <button class="lnk" id="hdrAbout" type="button">Licence · Disclaimer · About</button></p>
 
 <div class="card">
   <div class="bar">
-    <label class="btn primary">Open trace file<input id="file" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label><label class="btn">+ Add<input id="file2" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label>
-    <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="rm" hidden title="Remove the trace on screen from the page (the file itself is not touched)">Remove trace</button><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D trace compare</button><button id="t4" hidden>Loop gain signature</button>
-    <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button><button id="rp" class="primary">Repeaters</button><button id="ed" title="Add or remove repeaters and equalisers by hand">Edit repeaters</button><button id="rv" title="Number the repeaters from the other end of the trace, for a trace taken from the B end">Reverse numbering</button></span>
+    <label class="btn primary">Open trace file<input id="file" type="file" accept=".sor,.SOR,.all,.ALL,.zip,.cotdr" multiple></label><label class="btn">+ Add<input id="file2" type="file" accept=".sor,.SOR,.all,.ALL" multiple></label>
+    <span id="fname">No file loaded</span><select id="sel" hidden></select><button id="rm" hidden title="Remove the trace on screen from the page (the file itself is not touched)">Remove trace</button><button id="sv" hidden title="Save every loaded trace with your edits and settings in one session file (.cotdr.zip). Open it later with Open trace file.">Save session</button><button id="t2" class="primary" hidden>Trace</button><button id="t3" hidden>3D trace compare</button><button id="t4" hidden>Loop gain signature</button>
+    <span id="z2" class="bar"><button id="zin">＋</button><button id="zout">−</button><button id="zsig">Signal</button><button id="zfit">Full</button><button id="mk">Markers A/B</button><button id="lv">Levels U/L</button><button id="rp" class="primary">Repeaters</button><button id="ed" title="Add or remove repeaters and equalisers by hand">Edit repeaters</button><button id="rv" title="Number the repeaters from the other end of the trace, for a trace taken from the B end">Reverse numbering</button><button id="sf" title="Straight-line fit of the backscatter in each span between repeaters: an estimate of span loss, also when the signal is down in the noise">Span fits</button><button id="ior" title="Correct a wrongly set index of refraction so trace distances match the RPL (route position list)">IOR calibration</button></span>
   </div>
-  <div id="err" class="err"></div>
-  <div id="drop">Drop a .sor or Advantest .all file anywhere on this page</div>
+  <div id="err" class="err"></div><div id="sesmsg" class="sub" style="margin:4px 0 0"></div>
+  <div id="drop">Drop a .sor or Advantest .all file, or a saved session (.cotdr.zip), anywhere on this page</div>
   <div id="v4" hidden>
     <div class="bar" style="margin-top:10px">
       <label>Measure <select id="sm"><option value="out">Rayleigh level after the repeater (loop gain)</option><option value="plateau">HLLB reflection peak (filter plateau)</option></select></label>
       <label>Show <select id="sw"><option value="abs">Absolute</option><option value="chg">Deviation from baseline</option></select></label>
       <label>Baseline <select id="sbs"></select></label>
-      <label title="Set markers A and B on the Trace tab first. Only the repeaters between them are shown, which removes noisy stretches."><input id="slm" type="checkbox"> Only between markers A–B</label>
+      <button id="smk" title="Show markers A and B; drag them here or on the Trace tab, they stay in step">Markers A/B</button><label title="Set markers A and B first (here or on the Trace tab). Only the repeaters between them are shown, which removes noisy stretches."><input id="slm" type="checkbox"> Only between markers A–B</label>
       <label title="The Rayleigh level scales with pulse width; this removes the difference between traces. The filter plateau does not depend on pulse width."><input id="spw" type="checkbox" checked> Normalise for pulse width</label>
       <label>Flag span loss deviation relative to baseline over <input id="sth" type="number" value="0.5" min="0.1" step="0.1" style="width:60px"> dB</label>
     </div>
@@ -130,7 +130,22 @@ button:disabled{opacity:.45;cursor:not-allowed}
       <button id="ed-add" title="Click the plot to add a repeater (it snaps to the nearest rise)">Add repeater</button><button id="ed-del" title="Click near a repeater triangle to remove it">Remove repeater</button>
       <button id="ed-eqa" title="Click the plot to mark an equaliser">Add equaliser</button><button id="ed-eqd" title="Click near an equaliser marker to remove it">Remove equaliser</button>
       <button id="ed-undo">Undo</button><button id="ed-clr">Clear all edits</button><span id="ed-note" class="k"></span></div>
-      <div class="sub" style="margin:8px 0 0">Pick a mode, then click the plot. Edits apply to every loaded trace, change the numbering everywhere, and last until the page is closed. Added repeaters are orange triangles, equalisers are purple diamonds.</div></div>
+      <div class="sub" style="margin:8px 0 0">Pick a mode, then click the plot. Edits apply to every loaded trace and change the numbering everywhere. Use Save session to keep them; they are lost when the page is closed. Added repeaters are orange triangles, equalisers are purple diamonds.</div></div>
+    <div id="iorp" hidden><div class="mk" style="display:block">
+      <div class="sub" style="margin:0 0 8px">Enter the <b>RPL cable km</b> (cumulative cable length from the marine supplier's RPL, not route distance) for two or more repeaters you can see on this trace. Pick repeaters well apart. The viewer finds each repeater on the trace by its number (current numbering, including reverse numbering and your edits) and works out the <b>effective IOR</b> that makes the trace read in RPL cable km.</div>
+      <div class="tbl"><table><thead><tr><th>Repeater no.</th><th>RPL cable km</th><th>Trace km now</th><th class="l">Note</th><th>Residual after fit</th><th></th></tr></thead><tbody id="iorrows"></tbody></table></div>
+      <div class="bar" style="margin-top:8px"><button id="ior-add">+ Add row</button><button id="ior-pick" title="Then click a repeater on the trace to add a row for it">Pick repeater on trace</button><button id="ior-pastebtn">Paste list…</button><button id="ior-clear">Clear rows</button></div>
+      <div id="ior-pastebox" hidden style="margin-top:8px"><textarea id="ior-paste" rows="5" style="width:100%;max-width:520px;font:12px ui-monospace,monospace" placeholder="One repeater per line: number and RPL cable km, e.g.&#10;R1 26.42&#10;R60, 2810.5&#10;120	5612.8"></textarea><div class="bar" style="margin-top:4px"><button id="ior-fill">Fill rows</button></div></div>
+      <div id="ior-res" style="margin-top:10px"></div>
+      <div class="bar" style="margin-top:8px"><label><input type="radio" name="iorall" id="ior-all" checked> All loaded traces</label><label><input type="radio" name="iorall" id="ior-one"> This trace only</label>
+        <button id="ior-apply" class="primary" disabled>Apply effective IOR</button><button id="ior-reset" title="Go back to the IOR stored in each file">Reset to file IOR</button></div>
+      <div class="sub" style="margin:8px 0 0">Applying rescales all distances: trace, repeater positions, events, markers, equalisers and your repeater edits; loop gain and 3D plots follow. The trace files are not changed, and the calibration is saved in session files. The effective IOR makes the trace read in cable km and absorbs the fibre over-length in the cable, so it is not the fibre's true IOR. The offset is shown for information only.</div>
+    </div></div>
+    <div id="sfp" hidden><div class="mk" style="display:block">
+      <div id="sf-sum" class="sub" style="margin:0 0 6px"></div>
+      <div class="tbl" style="max-height:340px;overflow:auto"><table><thead><tr><th>Span</th><th>From km</th><th>To km</th><th>Length km</th><th>Slope dB/km</th><th>Fibre loss dB</th><th>Equaliser dB</th><th>Total dB</th><th>Fitted</th><th class="l">Check</th></tr></thead><tbody id="sfrows"></tbody></table></div>
+      <div class="sub" style="margin:8px 0 0">Each span is fitted with a straight line through the backscatter, from the end of the HLLB block plus the Skip after repeater distance (3D tab) to just before the next repeater. Clipped samples and stretches sunk in the noise are left out; the line is solid where it was fitted and dashed where it is carried on to the next repeater. Where an equaliser is marked in a span the fit is split either side of it, and the step between the two lines is the equaliser's insertion loss. Fibre loss = slope × length (per part when split). Click a row to zoom to the span.</div>
+    </div></div>
     <div id="lvp" hidden><div class="mk">
       <div><b style="color:#2e7d32">U</b> <span id="lvu"></span></div>
       <div><b style="color:#d81b60">L</b> <span id="lvl"></span></div>
@@ -212,7 +227,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'013',date:'2026-11-15'};   // increment n on every change (Build 013: licence, disclaimer, attribution)
+const BUILD={n:'017',date:'2026-11-16'};   // increment n on every change (Build 013: licence, disclaimer, attribution)
 const APP={name:'SOR - ALL / C-OTDR Trace Viewer',developer:'Paul Lomas',year:2026,assist:'Developed with the assistance of Claude, an AI model by Anthropic.',licVer:'1'};
 console.info(APP.name+' · Build '+BUILD.n+' · © '+APP.year+' '+APP.developer+'. All rights reserved.');
 $('#bld').textContent='Build '+BUILD.n+' · '+BUILD.date+' · © '+APP.year+' '+APP.developer;
@@ -329,7 +344,7 @@ function show(R,name){
   const row=(a)=>a.filter(r=>r[1]!=null&&String(r[1]).trim()!=='').map(r=>`<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('');
   $('#m1').innerHTML=row([
     ['Date',f.dt?new Date(f.dt*1000).toLocaleString():''],['Wavelength',f.wl+' nm'],
-    ['Pulse width',f.pw[0]!=null?f.pw[0]+' ns':''],['Index of refraction',f.ior?f.ior.toFixed(5):''],
+    ['Pulse width',f.pw[0]!=null?f.pw[0]+' ns':''],['Index of refraction',f.ior?f.ior.toFixed(5)+(R.iorFile!=null&&Math.abs(R.iorFile-f.ior)>1e-9?' (calibrated to RPL; file '+R.iorFile.toFixed(5)+')':''):''],
     ['Sample spacing',(R.dx*1000).toFixed(3)+' m'],['Data points',R.y.length.toLocaleString()],
     ['Averages',f.avg?f.avg.toLocaleString()+(f.avgTime?` (${f.avgTime} s)`:''):''],
     ['Trace range',(R.dx*(R.y.length-1)).toLocaleString(undefined,{maximumFractionDigits:1})+' km'],['Signal ends ≈',(sigEnd()*R.dx).toFixed(1)+' km'],['End of fiber (events)',R.sum.km?R.sum.km.toFixed(3)+' km':last?last.d.toFixed(3)+' km':''],['Total loss',R.sum.loss!=null?R.sum.loss.toFixed(3)+' dB':''],
@@ -386,8 +401,9 @@ function draw(){
   const n=i1-i0+1,per=n/pw;
   if(per<=1){for(let i=i0;i<=i1;i++)g.lineTo(X(i*dx),Y(y[i]))}
   else for(let p=0;p<pw;p++){const a=i0+Math.floor(p*per),e=Math.min(i1,i0+Math.floor((p+1)*per));let mn=1e9,mx=-1e9;
-    for(let i=a;i<=e;i++){const v=y[i];if(v<mn)mn=v;if(v>mx)mx=v}g.moveTo(m.l+p+.5,Y(mx));g.lineTo(m.l+p+.5,Y(mn))}
+    for(let i=a;i<=e;i++){const v=y[i];if(v<mn)mn=v;if(v>mx)mx=v}const px=m.l+p+.5,ya=Y(mx),yb=Y(mn);g.lineTo(px,ya);g.lineTo(px,yb===ya?yb+.75:yb)}   // one continuous line: flat stretches stay solid
   g.stroke();
+  if(SF.on)sfDraw(g,X,Y,m,ph);
   g.setLineDash([4,4]);g.textAlign='center';
   for(const e of D.ev){const px=X(e.d);if(px<m.l-10||px>m.l+pw+10)continue;
     g.strokeStyle=g.fillStyle=e.type[0]!=='0'?col('--refl'):col('--ok');g.beginPath();g.moveTo(px,m.t+14);g.lineTo(px,m.t+ph);g.stroke();g.fillText(e.n,px,m.t+10)}
@@ -459,7 +475,7 @@ function edNote(){const a=MAN.add.length,d=MAN.del.length,q=MAN.eq.length;
   $('#ed-note').textContent=(a||d||q)?a+' added \u00b7 '+d+' removed \u00b7 '+q+' equaliser'+(q===1?'':'s'):'No manual edits yet';
   [['add','#ed-add'],['del','#ed-del'],['eqa','#ed-eqa'],['eqd','#ed-eqd']].forEach(([m,id])=>$(id).className=ED.mode===m?'primary':'');
   $('#plot').style.cursor=ED.mode?'copy':''}
-function manChanged(){MAN.v++;T.forEach(R=>{R.rp=null});SGraw=null;edNote();if(mode==='3d')refresh3d();else if(mode==='sig')refreshSig();else if(D)draw()}
+function manChanged(){MAN.v++;T.forEach(R=>{R.rp=null});SGraw=null;edNote();if(SF.on)sfTable();if(!$('#iorp').hidden)iorCompute();if(mode==='3d')refresh3d();else if(mode==='sig')refreshSig();else if(D)draw()}
 function manEdit(kind,x){
   if(kind==='add'){MAN.add.push(x);MAN.h.push(['add',x])}
   else if(kind==='del'){const j=MAN.add.findIndex(a=>Math.abs(a-x)<=2.5);   // removing a repeater you added just undoes the addition
@@ -477,7 +493,8 @@ function editClick(px){   // a click on the plot while an edit mode is active
     manEdit('add',bv>3?best:x)}
   else if(ED.mode==='del'){const r=getRP(),i=near(r.km);if(i>=0)manEdit('del',r.km[i])}
   else if(ED.mode==='eqa')manEdit('eqa',x);
-  else if(ED.mode==='eqd'){const i=near(MAN.eq);if(i>=0)manEdit('eqd',MAN.eq[i])}}
+  else if(ED.mode==='eqd'){const i=near(MAN.eq);if(i>=0)manEdit('eqd',MAN.eq[i])}
+  else if(ED.mode==='ior'){const r=getRP(),i=near(r.km);if(i>=0){const L=r.km.length;iorAddRow(R.rev?L-i:i+1,'');ED.mode=null;edNote();iorBtns()}}}
 [['#ed-add','add'],['#ed-del','del'],['#ed-eqa','eqa'],['#ed-eqd','eqd']].forEach(([id,m])=>$(id).onclick=()=>{ED.mode=ED.mode===m?null:m;edNote()});
 $('#ed-undo').onclick=manUndo;
 $('#ed-clr').onclick=()=>{MAN.add.length=MAN.del.length=MAN.eq.length=MAN.h.length=0;ED.mode=null;manChanged()};
@@ -492,19 +509,19 @@ function getRP(){   // repeaters of the trace on screen, using the detection set
 }
 function rpHover(px,py){
   const tip=$('#rtip');
-  if(!RP.on||!D||drag){tip.hidden=true;RP.h=-1;return}
+  if(!D||drag||(!RP.on&&!SF.on)){tip.hidden=true;RP.h=-1;return}
   const r=getRP(),X=k=>V.m.l+(k-V.x0)/(V.x1-V.x0)*V.pw;let best=-1,bd=9;
-  r.km.forEach((k,i)=>{const d=Math.abs(px-X(k));if(d<bd){bd=d;best=i}});
+  if(RP.on)r.km.forEach((k,i)=>{const d=Math.abs(px-X(k));if(d<bd){bd=d;best=i}});
   if(best<0){let eb=-1,ed=9;MAN.eq.forEach((k,i)=>{const d=Math.abs(px-X(k));if(d<ed){ed=d;eb=i}});
     if(eb>=0){RP.h=-1;tip.innerHTML='<b>Equaliser</b> <span class="k">(added by hand)</span><br>'+MAN.eq[eb].toFixed(2)+' km';tip.hidden=false;tip.style.left=Math.max(4,Math.min(px+14,$('#plot').clientWidth-tip.offsetWidth-4))+'px';tip.style.top=Math.max(4,py-tip.offsetHeight-10)+'px';return}}
-  RP.h=best;if(best<0){tip.hidden=true;return}
+  RP.h=best;if(best<0){if(!sfTip(px,py))tip.hidden=true;return}
   const k=r.km[best],g=r.G[best],nx=r.km[best+1];
   const L=r.km.length,num=D.rev?L-best:best+1,nn=D.rev?num-1:num+1;   // reversed: the repeater nearest this end of the trace has the highest number
   tip.innerHTML='<b>Repeater '+num+'</b> <span class="k">of '+L+(D.rev?' (numbered from the far end)':'')+'</span>'+(r.fl&&r.fl[best]?(r.fl[best]===3?'<br><i>added manually</i>':'<br><i>inferred from '+(r.fl[best]===1?'a weak rise and span length':'span length only')+'</i>'):'')+'<br>'+k.toFixed(2)+' km'+(nx!=null?'<br>Span to repeater '+nn+': '+(nx-k).toFixed(1)+' km':'')+(g&&g.gain!=null?'<br>Gain: '+g.gain.toFixed(1)+' dB \u00b7 '+(-g.slope).toFixed(3)+' dB/km':'');
   tip.hidden=false;tip.style.left=Math.max(4,Math.min(px+14,$('#plot').clientWidth-tip.offsetWidth-4))+'px';tip.style.top=Math.max(4,py-tip.offsetHeight-10)+'px';
 }
 $('#rp').onclick=()=>{RP.on=!RP.on;RP.h=-1;$('#rtip').hidden=true;$('#rp').className=RP.on?'primary':'';draw()};
-$('#rv').onclick=()=>{if(!D)return;D.rev=!D.rev;$('#rv').className=D.rev?'primary':'';draw()};   // per-trace: number from the other end
+$('#rv').onclick=()=>{if(!D)return;D.rev=!D.rev;$('#rv').className=D.rev?'primary':'';draw();if(SF.on)sfTable();if(!$('#iorp').hidden)iorCompute()};   // per-trace: number from the other end
 
 /* ---------- markers A/B: delta, loss rate and least-squares event loss ---------- */
 let M={on:false,a:0,b:0},LV={on:false,u:0,l:0};   // A/B distance markers; U/L level markers
@@ -534,7 +551,12 @@ function mkUpdate(){
     $('#mkx').textContent=Math.abs(loss).toFixed(2)+' dB '+(loss>=0?'loss':'gain')+' (trend slopes '+L.sl.toFixed(3)+' / '+Rt.sl.toFixed(3)+' dB/km)'}
   else $('#mkx').textContent='– (widen the fit window or move the markers inward)';
 }
-$('#mk').onclick=()=>{M.on=!M.on;$('#mk').className=M.on?'primary':'';if(M.on&&D){const w=V.x1-V.x0;M.a=snapX(V.x0+w/3);M.b=snapX(V.x0+2*w/3)}draw();mkUpdate()};
+function mkToggle(){   // markers A/B: one pair, shared by the Trace tab and the loop gain plots
+  M.on=!M.on;['#mk','#smk'].forEach(s=>$(s).className=M.on?'primary':'');
+  if(M.on&&D){if(mode==='sig'&&SG&&SG.m&&SG.n>1){const a=SG.m.a,b=SG.m.b;M.a=snapX(sgIdxKm(a+(b-a)/3));M.b=snapX(sgIdxKm(a+2*(b-a)/3))}
+    else{const w=V.x1-V.x0;M.a=snapX(V.x0+w/3);M.b=snapX(V.x0+2*w/3)}}
+  if(mode==='sig'){if($('#slm').checked)sigRender();else drawSig()}else draw();mkUpdate()}
+$('#mk').onclick=mkToggle;$('#smk').onclick=mkToggle;
 $('#mw').addEventListener('input',mkUpdate);
 $('#lv').onclick=()=>{LV.on=!LV.on;$('#lv').className=LV.on?'primary':'';if(LV.on&&D){const r=V.hi-V.lo;LV.u=V.hi-r/3;LV.l=V.hi-2*r/3}draw();lvUpdate()};
 
@@ -738,6 +760,12 @@ function draw3d(){
 }
 /* ---------- loop gain signature (LME style): loop gain and differential loop gain per repeater ---------- */
 let SG=null,SGraw=null,SGkey='',SGh=-1,SGx=null,SGy=[null,null],SGvk='';   // SGx = visible repeater range, SGy = manual vertical ranges (null = auto)
+const EQC='#8e24aa';
+const MKC={a:'#f57c00',b:'#8e24aa'};   // marker colours, as on the Trace tab
+let SGdrag=null;   // 'a' or 'b' while a marker is dragged on the loop gain plots
+function sgKmIdx(k){const K=SG&&SG.km;if(!K||K.length<2||!(k>=K[0]&&k<=K[K.length-1]))return null;   // km → fractional repeater position on the plots
+  for(let r=0;r<K.length-1;r++)if(k<=K[r+1])return r+(k-K[r])/((K[r+1]-K[r])||1);return K.length-1}
+function sgIdxKm(q){const K=SG.km,n=K.length;q=Math.max(0,Math.min(n-1,q));const r=Math.min(n-2,Math.floor(q));return K[r]+(K[r+1]-K[r])*(q-r)}   // equaliser colour, the same purple as on the Trace tab
 const SGCOL=['#4fc3f7','#ffb74d','#81c784','#ba68c8','#e57373','#90a4ae','#f06292','#aed581'];
 const sgName=R=>{const d=R.fx.dt?new Date(R.fx.dt*1000).toISOString().slice(0,10):'';return R.name.replace(/\.[^.]+$/,'').slice(0,26)+(d?' ('+d+')':'')};
 function sigCompute(){   // per trace and repeater: the filter plateau level and the output level (extrapolated span line); cached until the traces or detection settings change
@@ -767,6 +795,7 @@ function sigRender(){
   if(SGvk!==vk){SGvk=vk;SGx=null;SGy=[null,null]}   // a different view: start from the full range again
   const n=sel.length;if(SGx&&SGx.b>n-1)SGx=null;
   SG={ts,km:sel.map(r=>km[r]),fl:km.fl?sel.map(r=>km.fl[r]):null,n,chg,thr,bi,rev,use,s1:pick(F1),s2:pick(F2),lab:r=>rev?nF-sel[r]:sel[r]+1,names:ts.map(sgName)};   // numbers stay those of the full list
+  SG.eq=MAN.eq.map(k=>{const K=SG.km;for(let r=0;r<K.length-1;r++)if(k>=K[r]&&k<=K[r+1])return{k,r,x:r+(k-K[r])/((K[r+1]-K[r])||1)};return null}).filter(Boolean).sort((a,b)=>a.x-b.x);   // equalisers placed between the repeaters either side of them (x = fractional position on the repeater axis)
   const warn=[];
   if(use==='plateau')ts.forEach((R,t)=>{if(!hasPl[t])warn.push(sgName(R)+' has no filter plateau, so its values are not comparable')});
   if(use==='out'&&usePw&&ts.some(R=>R.fx.pw&&pwb&&Math.abs(R.fx.pw[0]/pwb-1)>.05))warn.push('levels normalised for pulse width');
@@ -778,8 +807,9 @@ function sigTable(){
   const S=SG,f=v=>isFinite(v)?v.toFixed(2):'\u2013';
   let h='<table><thead><tr><th rowspan="2">#</th><th rowspan="2">km</th>'+S.names.map((nm,t)=>'<th colspan="2" style="color:'+SGCOL[t%8]+'">'+nm+(t===S.bi?' (baseline)':'')+'</th>').join('')+'</tr><tr>'+S.names.map(()=>'<th>'+(S.chg?'\u0394 loop gain':'Loop gain')+'</th><th>'+(S.chg?'Span loss dev.':'Span gain/loss')+'</th>').join('')+'</tr></thead><tbody>';
   for(let r=0;r<S.n;r++){const flag=S.chg&&S.ts.some((R,t)=>t!==S.bi&&Math.abs(S.s2[t][r])>S.thr);
-    h+='<tr'+(flag?' class="flag"':'')+'><td>'+S.lab(r)+(S.fl&&S.fl[r]?(S.fl[r]===3?'+':'~'):'')+'</td><td>'+S.km[r].toFixed(1)+'</td>'+S.ts.map((R,t)=>'<td>'+f(S.s1[t][r])+'</td><td><b>'+f(S.s2[t][r])+'</b></td>').join('')+'</tr>'}
-  $('#sgt').innerHTML='<h2 style="margin:14px 0 6px">Per-repeater values</h2><div class="tbl" style="max-height:340px;overflow:auto">'+h+'</tbody></table></div><div class="sub" style="margin:6px 0 0">Loop gain is the Rayleigh level just after each repeater (dB). Span gain/loss is the difference from the previous repeater, that is the repeater gain minus the span loss between them. Span loss deviation is that difference minus the same difference in the baseline trace: a positive value means more gain (less loss) than the baseline. Rows are shaded where the deviation exceeds the flag level. A ~ marks a repeater inferred from the span length, and a + one added by hand.</div>';
+    h+='<tr'+(flag?' class="flag"':'')+'><td>'+S.lab(r)+(S.fl&&S.fl[r]?(S.fl[r]===3?'+':'~'):'')+'</td><td>'+S.km[r].toFixed(1)+'</td>'+S.ts.map((R,t)=>'<td>'+f(S.s1[t][r])+'</td><td><b>'+f(S.s2[t][r])+'</b></td>').join('')+'</tr>';
+    (S.eq||[]).filter(q=>q.r===r).forEach(q=>{h+='<tr><td colspan="'+(2+2*S.ts.length)+'" style="color:'+EQC+';font-weight:600">◆ Equaliser at '+q.k.toFixed(1)+' km, between repeaters '+S.lab(r)+' and '+S.lab(r+1)+'</td></tr>'})}
+  $('#sgt').innerHTML='<h2 style="margin:14px 0 6px">Per-repeater values</h2><div class="tbl" style="max-height:340px;overflow:auto">'+h+'</tbody></table></div><div class="sub" style="margin:6px 0 0">Loop gain is the Rayleigh level just after each repeater (dB). Span gain/loss is the difference from the previous repeater, that is the repeater gain minus the span loss between them. Span loss deviation is that difference minus the same difference in the baseline trace: a positive value means more gain (less loss) than the baseline. Rows are shaded where the deviation exceeds the flag level. A ~ marks a repeater inferred from the span length, and a + one added by hand. Equalisers you mark on the Trace tab appear as purple rows here and as dashed purple lines on the plots: an equaliser in a span usually explains a step in that span\'s gain/loss.</div>';
 }
 function drawSig(){
   const c=$('#sgc'),b=c.getBoundingClientRect(),dpr=devicePixelRatio||1;c.width=b.width*dpr;c.height=b.height*dpr;
@@ -790,6 +820,10 @@ function drawSig(){
   const W=b.width,H=b.height,m={l:60,r:34,t:30,b:30},gap=46,ph=(H-m.t-m.b-gap)/2,pw=W-m.l-m.r,full=S.n-1,xa=SGx?SGx.a:0,xb=SGx?SGx.b:full,X=r=>m.l+(r-xa)/(xb-xa)*pw;
   S.m={l:m.l,pw,a:xa,b:xb};S.geo=[];
   let lx=m.l;g.textAlign='left';S.ts.forEach((R,t)=>{g.fillStyle=SGCOL[t%8];g.fillRect(lx,9,14,4);g.fillStyle=col('--fg');const tx=S.names[t]+(t===S.bi?' (baseline)':'');g.fillText(tx,lx+19,14);lx+=g.measureText(tx).width+38});
+  if(M.on){const f=k=>k.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1});
+    const out=sgKmIdx(M.a)==null||sgKmIdx(M.b)==null;g.textAlign='right';g.fillStyle=col('--muted');
+    g.fillText('A '+f(M.a)+' km · B '+f(M.b)+' km · A–B '+f(Math.abs(M.b-M.a))+' km'+(out?' (partly outside the plotted repeaters)':''),W-m.r,14);g.textAlign='left'}
+  if(S.eq&&S.eq.length){g.fillStyle=EQC;g.beginPath();g.moveTo(lx+5,7);g.lineTo(lx+10,12);g.lineTo(lx+5,17);g.lineTo(lx,12);g.closePath();g.fill();g.fillStyle=col('--fg');g.fillText('Equaliser',lx+15,16)}
   const r0=Math.max(0,Math.floor(xa)-1),r1=Math.min(full,Math.ceil(xb)+1),cl=v=>Math.max(0,Math.min(100,v));
   [[m.t,S.s1,S.chg?'Loop gain deviation (dB)':'Loop gain (dB)',0],[m.t+ph+gap,S.s2,S.chg?'Span loss deviation (dB)':'Span gain / loss (dB)',1]].forEach(([y0,A,title,pi])=>{
     let flo=1e9,fhi=-1e9,vlo=1e9,vhi=-1e9;
@@ -807,6 +841,13 @@ function drawSig(){
     for(let r=Math.ceil(xa/st)*st;r<=xb;r+=st)g.fillText(S.lab(r),X(r),y0+ph+15);
     g.textAlign='right';g.fillText(S.rev?'T2':'T1',m.l-8,y0+ph+15);g.textAlign='left';g.fillText(S.rev?'T1':'T2',m.l+pw+4,y0+ph+15);
     g.save();g.beginPath();g.rect(m.l,y0-4,pw,ph+8);g.clip();
+    (S.eq||[]).forEach(e=>{if(e.x<xa-1||e.x>xb+1)return;const x=Math.round(X(e.x))+.5;   // equaliser: dashed purple line, diamond at the top of each panel
+      g.strokeStyle=EQC;g.lineWidth=1.2;g.setLineDash([4,3]);g.beginPath();g.moveTo(x,y0+12);g.lineTo(x,y0+ph);g.stroke();g.setLineDash([]);
+      g.fillStyle=EQC;g.beginPath();g.moveTo(x,y0);g.lineTo(x+5,y0+6);g.lineTo(x,y0+12);g.lineTo(x-5,y0+6);g.closePath();g.fill()});
+    if(M.on){const qa=sgKmIdx(M.a),qb=sgKmIdx(M.b);   // markers A/B: shaded span and solid lines
+      if(qa!=null&&qb!=null){g.fillStyle='rgba(128,128,128,.11)';const x1=X(Math.min(qa,qb)),x2=X(Math.max(qa,qb));g.fillRect(x1,y0,x2-x1,ph)}
+      [['a',qa],['b',qb]].forEach(([w,q])=>{if(q==null||q<xa-1||q>xb+1)return;const x=Math.round(X(q))+.5;g.strokeStyle=MKC[w];g.lineWidth=1.6;g.beginPath();g.moveTo(x,y0);g.lineTo(x,y0+ph);g.stroke();
+        if(pi===0){g.fillStyle=MKC[w];g.fillRect(x+2,y0+ph-17,15,15);g.fillStyle='#fff';g.font='bold 11px system-ui,sans-serif';g.textAlign='center';g.fillText(w.toUpperCase(),x+9.5,y0+ph-5.5);g.font='11px system-ui,sans-serif'}})}
     S.ts.forEach((R,t)=>{const a=A[t];g.strokeStyle=g.fillStyle=SGCOL[t%8];g.lineWidth=t===S.bi?2.4:1.4;g.beginPath();let on=false;
       for(let r=r0;r<=r1;r++){const v=a[r];if(!isFinite(v)){on=false;continue}g[on?'lineTo':'moveTo'](X(r),Y(v));on=true}g.stroke();
       if(xb-xa<=140)for(let r=r0;r<=r1;r++){const v=a[r];if(!isFinite(v))continue;g.beginPath();g.arc(X(r),Y(v),t===S.bi?2.8:2.2,0,6.3);g.fill()}
@@ -819,15 +860,26 @@ function drawSig(){
   const xw=$('#sgxw').style;xw.left=(xa/full*100)+'%';xw.width=((xb-xa)/full*100)+'%';
   const mc=$('#sgmini'),mb=mc.getBoundingClientRect();mc.width=mb.width*dpr;mc.height=mb.height*dpr;const mg=mc.getContext('2d');mg.setTransform(dpr,0,0,dpr,0,0);   // overview strip
   const G0=S.geo[0];S.ts.forEach((R,t)=>{mg.strokeStyle=SGCOL[t%8];mg.lineWidth=1;mg.beginPath();let on=false;S.s1[t].forEach((v,r)=>{if(!isFinite(v)){on=false;return}const x=r/full*mb.width,y=(G0.fhi-v)/(G0.fhi-G0.flo)*mb.height;mg[on?'lineTo':'moveTo'](x,y);on=true});mg.stroke()});
+  (S.eq||[]).forEach(e=>{const x=Math.round(e.x/full*mb.width)+.5;mg.strokeStyle=EQC;mg.lineWidth=1.5;mg.beginPath();mg.moveTo(x,0);mg.lineTo(x,mb.height);mg.stroke()});   // equalisers on the overview strip
 }
 function refreshSig(){if(!T.length)return;sigCompute();sigRender()}
+{const c=$('#sgc');   // drag markers A/B on the loop gain plots; the Trace tab follows
+  const xOf=q=>SG.m.l+(q-SG.m.a)/(SG.m.b-SG.m.a)*SG.m.pw;
+  const near=px=>{if(!M.on||!SG||!SG.m||SG.n<2)return null;let best=null,bd=7;[['a',M.a],['b',M.b]].forEach(([w,k])=>{const q=sgKmIdx(k);if(q==null)return;const d=Math.abs(px-xOf(q));if(d<bd){bd=d;best=w}});return best};
+  c.addEventListener('pointerdown',e=>{const w=near(e.clientX-c.getBoundingClientRect().left);if(!w)return;SGdrag=w;c.setPointerCapture(e.pointerId);$('#sgtip').hidden=true;SGh=-1;e.preventDefault()});
+  c.addEventListener('pointermove',e=>{const px=e.clientX-c.getBoundingClientRect().left;
+    if(SGdrag){const q=SG.m.a+(px-SG.m.l)/SG.m.pw*(SG.m.b-SG.m.a),k=sgIdxKm(q);M[SGdrag]=D?snapX(k):k;drawSig();return}
+    c.style.cursor=near(px)?'ew-resize':'crosshair'});
+  const end=()=>{if(!SGdrag)return;SGdrag=null;if($('#slm').checked)sigRender();else drawSig();mkUpdate()};
+  c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);}
 function tabsUI(){$('#t2').hidden=$('#t4').hidden=!T.length;$('#t3').hidden=T.length<2}
 ['sm','sw','sbs','spw','sth','slm'].forEach(id=>$('#'+id).addEventListener('input',sigRender));
 {const c=$('#sgc'),fm=v=>isFinite(v)?v.toFixed(2):'\u2013';
-  c.addEventListener('pointermove',e=>{if(!SG||SG.n<2||!SG.m)return;const bx=c.getBoundingClientRect(),px=e.clientX-bx.left,M2=SG.m,r=Math.round(M2.a+(px-M2.l)/M2.pw*(M2.b-M2.a));
+  c.addEventListener('pointermove',e=>{if(SGdrag||!SG||SG.n<2||!SG.m)return;const bx=c.getBoundingClientRect(),px=e.clientX-bx.left,M2=SG.m,r=Math.round(M2.a+(px-M2.l)/M2.pw*(M2.b-M2.a));
     if(r<0||r>=SG.n||px<M2.l||px>M2.l+M2.pw){SGh=-1;$('#sgtip').hidden=true;drawSig();return}
     SGh=r;drawSig();const tip=$('#sgtip');
-    tip.innerHTML='<b>Repeater '+SG.lab(r)+(SG.fl&&SG.fl[r]?(SG.fl[r]===3?'+':'~'):'')+'</b> <span class="k">'+SG.km[r].toFixed(1)+' km</span>'+SG.ts.map((R,t)=>'<br><span style="color:'+SGCOL[t%8]+'">\u25CF</span> '+SG.names[t]+': '+fm(SG.s1[t][r])+' / '+fm(SG.s2[t][r])).join('')+'<br><span class="k">'+(SG.chg?'loop gain deviation / span loss deviation':'loop gain / span gain-loss')+', dB</span>';
+    tip.innerHTML='<b>Repeater '+SG.lab(r)+(SG.fl&&SG.fl[r]?(SG.fl[r]===3?'+':'~'):'')+'</b> <span class="k">'+SG.km[r].toFixed(1)+' km</span>'+SG.ts.map((R,t)=>'<br><span style="color:'+SGCOL[t%8]+'">\u25CF</span> '+SG.names[t]+': '+fm(SG.s1[t][r])+' / '+fm(SG.s2[t][r])).join('')+'<br><span class="k">'+(SG.chg?'loop gain deviation / span loss deviation':'loop gain / span gain-loss')+', dB</span>'
+      +(SG.eq||[]).filter(q=>q.r===r-1||q.r===r).map(q=>'<br><span style="color:'+EQC+'">◆</span> <b>Equaliser</b> at '+q.k.toFixed(1)+' km, between repeaters '+SG.lab(q.r)+' and '+SG.lab(q.r+1)+(q.r===r-1?' <span class="k">(in the span leading to this repeater, so it affects this span gain/loss)</span>':'')).join('');
     tip.hidden=false;tip.style.left=Math.max(4,Math.min(px+14,c.clientWidth-tip.offsetWidth-4))+'px';tip.style.top='38px'});
   c.addEventListener('pointerleave',()=>{SGh=-1;$('#sgtip').hidden=true;if(SG)drawSig()});
   c.addEventListener('wheel',e=>{if(!SG||SG.n<3||!SG.m)return;e.preventDefault();   // scroll to zoom the repeater range around the pointer
@@ -861,19 +913,30 @@ function setMode(m){
 async function loadFiles(files,add){
   if(!LIC.ok){licShow('gate');return}
   const fl=[...files];if(!fl.length)return;
-  const out=add?T.slice():[];$('#err').textContent='';
+  $('#err').textContent='';sesNote('');
+  const bufs=[];for(const f of fl)bufs.push([f,await f.arrayBuffer()]);
+  const ses=bufs.find(([f,b])=>isZip(new Uint8Array(b,0,Math.min(4,b.byteLength))));
+  if(ses){   // a session file replaces everything on the page
+    try{await openSession(ses[1],ses[0].name);if(bufs.length>1)sesNote('Only the session was opened; open other trace files with + Add.')}
+    catch(e){$('#err').textContent='Could not open '+ses[0].name+': '+e.message}
+    return}
+  const out=add?T.slice():[];
   const added=[];
-  for(const f of fl){if(out.length>=8)break;
-    try{const R=parseAny(await f.arrayBuffer());R.name=f.name;out.push(R);added.push(R)}catch(e){$('#err').textContent+='Could not read '+f.name+': '+e.message+'  '}}
-  if(!out.length)return;out.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}));T=out;   // lists are kept in alphabetical order
+  for(const [f,buf] of bufs){if(out.length>=8)break;
+    try{const R=parseAny(buf);R.raw=buf;R.name=f.name;out.push(R);added.push(R)}catch(e){$('#err').textContent+='Could not read '+f.name+': '+e.message+'  '}}
+  if(!out.length)return;
+  installTraces(out,added);
+}
+function installTraces(out,added){   // put a set of parsed traces on the page (file loading and session opening)
+  out.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}));T=out;   // lists are kept in alphabetical order
   $('#sel').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+R.name.replace(/[<&"]/g,'')+(R.fx.wl?' ('+R.fx.wl+' nm)':'')+'</option>').join('');
-  $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;tabsUI();$('#rm').hidden=false;
+  $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;tabsUI();$('#rm').hidden=false;$('#sv').hidden=false;
   const last=added.length?added[added.length-1]:T[T.length-1];$('#sel').value=T.indexOf(last);show(last,last.name);
   const lo=T.reduce((a,R,i)=>R.fx.wl<T[a].fx.wl||R.fx.wl===T[a].fx.wl&&R.fx.dt<T[a].fx.dt?i:a,0);$('#bs').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+(R.fx.wl?R.fx.wl+' nm – ':'')+R.name.replace(/[<&"]/g,'')+'</option>').join('');$('#bs').value=lo;$('#sbs').innerHTML=$('#bs').innerHTML;$('#sbs').value=lo;
   $('#md').value=T.length===2?'diff':'abs';$('#nrm').checked=T.length!==2&&!$('#gx').checked;
   if(T.length<2&&mode==='3d')mode='2d';setMode(mode);
 }
-$('#sel').onchange=e=>{const R=T[+e.target.value];show(R,R.name);setMode(mode)};
+$('#sel').onchange=e=>{const R=T[+e.target.value];show(R,R.name);setMode(mode);if(SF.on)sfTable();if(!$('#iorp').hidden)iorCompute()};
 function fillLists(){   // rebuild the trace selector and the baseline list; returns the default baseline (lowest wavelength, then oldest)
   const nm=R=>R.name.replace(/[<&"]/g,'');
   $('#sel').innerHTML=T.map((R,i)=>'<option value="'+i+'">'+nm(R)+(R.fx.wl?' ('+R.fx.wl+' nm)':'')+'</option>').join('');
@@ -886,7 +949,7 @@ function removeTrace(){   // take the trace on screen out of the session
   T.splice(i,1);S3=null;$('#rtip').hidden=true;RP.h=-1;
   if(!T.length){   // nothing left: back to the empty start screen
     D=null;mode='2d';V={x0:0,x1:1,cx:null};
-    ['#view','#detail','#v3','#v4','#sel','#t2','#t3','#t4','#rm'].forEach(s=>$(s).hidden=true);
+    ['#view','#detail','#v3','#v4','#sel','#t2','#t3','#t4','#rm','#sv'].forEach(s=>$(s).hidden=true);sesNote('');
     $('#drop').hidden=false;$('#fname').hidden=false;$('#fname').textContent='No file loaded';$('#err').textContent='';return}
   const k=Math.min(i,T.length-1),lo=fillLists(),bi=T.indexOf(base);
   $('#sel').hidden=T.length<2;$('#fname').hidden=T.length>1;tabsUI();$('#sel').value=k;$('#bs').value=bi>=0?bi:lo;$('#sbs').innerHTML=$('#bs').innerHTML;$('#sbs').value=bi>=0?bi:lo;
@@ -896,6 +959,7 @@ function removeTrace(){   // take the trace on screen out of the session
 $('#rm').onclick=removeTrace;
 $('#t2').onclick=()=>setMode('2d');$('#t3').onclick=()=>setMode('3d');$('#t4').onclick=()=>setMode('sig');
 ['stp','spc','nrm','md','dt','gl','rl','bs','sk','lm','inf','rn'].forEach(id=>$('#'+id).addEventListener('input',refresh3d));
+['stp','spc','sk','inf'].forEach(id=>$('#'+id).addEventListener('input',()=>{T.forEach(R=>{R.rp=null});if(SF.on){sfTable();if(mode==='2d')draw()}}));
 $('#md').addEventListener('change',()=>{$('#nrm').checked=$('#md').value!=='diff'&&!$('#gx').checked;refresh3d()});
 $('#gx').addEventListener('change',()=>{if($('#gx').checked)$('#nrm').checked=false;refresh3d()});
 $('#r3').onclick=()=>{V3={az:-.9,el:.55,zoom:1,z:null};draw3d()};
@@ -941,6 +1005,298 @@ $('#ftDis').addEventListener('click',()=>licShow(LIC.ok?'view':'gate','disclaime
 $('#ftAbout').addEventListener('click',()=>licShow(LIC.ok?'view':'gate','about'));
 addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#lic').classList.contains('on')&&LIC.mode==='view')licHide()});
 licInit();
+
+/* ---------- span fits: straight-line fit of the backscatter in each span (item 25) ---------- */
+const SF={on:false,res:null,key:'',R:null},SFC='#d32f2f';   // overlay colour: red, distinct from the trace, markers and equalisers
+function sfFloor(R){if(R.sfFloor==null){let m=1e9;for(let i=0;i<R.y.length;i++)if(R.y[i]<m)m=R.y[i];R.sfFloor=m}return R.sfFloor}
+function sfWin(R,u,v,cut){   // fit [u,v] km from its start until the backscatter sinks into the noise; clipped samples skipped
+  const y=R.y,dx=R.dx,fy=sfFloor(R),ia=Math.max(0,Math.ceil(u/dx)),ib=Math.min(y.length-1,Math.floor(v/dx)),B=Math.max(5,Math.round(0.5/dx));
+  if(ib-ia<B)return{why:'too short'};
+  const xs=[],ys=[];let stop=ib;
+  for(let i=ia;i<=ib;i+=B){const e=Math.min(ib,i+B-1);let nc=0,t=0,c=0;for(let j=i;j<=e;j++){if(y[j]<=fy+0.05)nc++;else{t+=y[j];c++}}
+    if(nc>(e-i+1)*0.3||(cut!=null&&c&&t/c<cut)){stop=i-1;break}
+    for(let j=i;j<=e;j++)if(y[j]>fy+0.05){xs.push(j*dx);ys.push(y[j])}}
+  {const K=Math.max(5,Math.round(1/dx)),bm=[];let j0=0;   // 1 km block means of the kept samples
+    for(let k=0;k<xs.length;){const x0=xs[k];let t=0,c=0;while(k<xs.length&&xs[k]<x0+K*dx){t+=ys[k];c++;k++}bm.push({x:x0,m:t/c,k0:j0});j0=k}
+    if(bm.length>=6){const d=bm.slice(1).map((b,i)=>b.m-bm[i].m),ref=d.slice(0,4).sort((a,b)=>a-b)[1]||0;
+      for(let i=2;i<d.length;i++)if(d[i]<ref-0.25&&d[i-1]<ref-0.25){const cutK=bm[i-1].k0;xs.length=cutK;ys.length=cutK;stop=Math.round(bm[i-1].x/dx);break}}}   // roll-off: two 1 km steps each 0.25 dB/km steeper than the start
+  const xf=Math.max(u,Math.min(stop*dx,xs.length?xs[xs.length-1]:u)),n=xs.length;
+  if(n<20||xf-u<3)return{why:'in the noise',xf};
+  let sx=0,sy=0;for(let i=0;i<n;i++){sx+=xs[i];sy+=ys[i]}const xm=sx/n,ym=sy/n;let sxx=0,sxy=0;
+  for(let i=0;i<n;i++){const a=xs[i]-xm;sxx+=a*a;sxy+=a*(ys[i]-ym)}
+  const sl=sxx>0?sxy/sxx:0;let ss=0;for(let i=0;i<n;i++){const e=ys[i]-(ym+sl*(xs[i]-xm));ss+=e*e}
+  return{sl,xm,ym,at:x=>ym+sl*(x-xm),u,xf,v,n,rms:Math.sqrt(ss/n),xs,ys,ss}
+}
+function sfStep(f){   // best single step inside one fitted window: two lines clearly better than one?
+  const {xs,ys}=f,n=xs.length;if(n<60||f.xf-f.u<8)return null;
+  const P=[[0,0,0,0,0]];for(let i=0;i<n;i++){const q=P[i],x=xs[i]-f.u,y=ys[i];P.push([q[0]+1,q[1]+x,q[2]+y,q[3]+x*x,q[4]+x*y])}
+  const yy=[0];for(let i=0;i<n;i++)yy.push(yy[i]+ys[i]*ys[i]);
+  const seg=(a,b)=>{const c=P[b][0]-P[a][0],sx=P[b][1]-P[a][1],sy=P[b][2]-P[a][2],sxx=P[b][3]-P[a][3],sxy=P[b][4]-P[a][4],syy=yy[b]-yy[a];
+    const vx=sxx-sx*sx/c,cxy=sxy-sx*sy/c,sl=vx>0?cxy/vx:0;return{ss:Math.max(0,syy-sy*sy/c-sl*cxy),sl,b0:sy/c-sl*sx/c}};
+  const one=seg(0,n),stepN=Math.max(1,Math.round(n/120));let best=null;
+  for(let j=1;j<n;j+=stepN){if(xs[j]-f.u<3||f.xf-xs[j]<3)continue;const L=seg(0,j),Rr=seg(j,n),t=L.ss+Rr.ss;if(!best||t<best.t)best={t,j,L,R:Rr}}
+  if(!best)return null;const xj=xs[best.j]-f.u,step=(best.L.b0+best.L.sl*xj)-(best.R.b0+best.R.sl*xj);
+  return Math.abs(step)>=1&&best.t<0.4*one.ss?{at:xs[best.j],step}:null;   // real backscatter ripples by a few tenths of a dB: only clear steps
+}
+function spanFits(){
+  const R=D;if(!R)return[];const r=getRP(),key=[R.name,R.dx,MAN.v,r.km.length,$('#sk').value,MAN.eq.join(',')].join('|');
+  if(SF.res&&SF.R===R&&SF.key===key)return SF.res;
+  const pk=pwKm(R),sk=Math.max(+$('#sk').value||4,1.3*pk),em=Math.max(1.5,0.3*pk),gb=Math.max(0.5,0.3*pk),ga=Math.max(1,1.3*pk),end=sigEnd(R)*R.dx;
+  const z=noiseStats(R),cut=z.sep>=4?z.nl+2:null,L=r.km.length,out=[];
+  for(let s=0;s<L-1;s++){
+    const a=r.km[s],b=r.km[s+1];if(a>=end)break;
+    const eqs=MAN.eq.filter(e=>e>a+0.5&&e<b-0.5).sort((p,q)=>p-q),cuts=[a,...eqs,b],parts=[];
+    for(let j=0;j<cuts.length-1;j++){const u=j?cuts[j]+ga:a+sk,v=(j<cuts.length-2?cuts[j+1]-gb:Math.min(b,end)-em);parts.push({p0:cuts[j],p1:cuts[j+1],f:v>u?sfWin(R,u,v,cut):{why:'too short'}})}
+    const ok=parts.every(q=>q.f&&q.f.sl!=null),eqLoss=eqs.map((e,j)=>{const A=parts[j].f,Bf=parts[j+1].f;return A&&A.sl!=null&&Bf&&Bf.sl!=null?A.at(e)-Bf.at(e):null});
+    const fibre=ok?parts.reduce((t,q)=>t-q.f.sl*(q.p1-q.p0),0):null,eqSum=eqLoss.every(v=>v!=null)?eqLoss.reduce((t,v)=>t+v,0):null;
+    const lenFit=parts.reduce((t,q)=>t+(q.f&&q.f.sl!=null?q.f.xf-q.f.u:0),0),lenWin=parts.reduce((t,q)=>t+Math.max(0,(q.f&&q.f.v!=null?q.f.v:q.p1)-(q.f&&q.f.u!=null?q.f.u:q.p0)),0);
+    const sl=ok?-fibre/(b-a):null,flags=[];
+    if(!ok)flags.push(parts.some(q=>q.f&&q.f.why==='in the noise')?'in the noise: too little usable signal':'too short to fit');
+    const notes=[];if(ok&&parts.some(q=>q.f.xf<q.f.v-0.5))notes.push('end of span in the noise: line carried on to the next repeater');
+    if(ok&&parts.some(q=>q.f.rms>1.5))flags.push('large scatter');
+    let stepAt=null;if(ok&&!eqs.length){const st=sfStep(parts[0].f);if(st){stepAt=st;flags.push('possible equaliser or event at ~'+st.at.toFixed(1)+' km ('+(st.step>=0?'':'+')+Math.abs(st.step).toFixed(1)+' dB '+(st.step>=0?'drop':'rise')+'): mark it as an equaliser to split the fit')}}
+    out.push({s,a,b,eqs,parts,eqLoss,fibre,eqSum,total:fibre!=null&&eqSum!=null?fibre+eqSum:null,sl,lenFit,lenWin,flags,notes,stepAt});
+  }
+  out.forEach(o=>{if(o.sl!=null&&o.lenWin>0&&o.lenFit<0.4*o.lenWin){o.short=true;o.notes.push('only '+Math.round(100*o.lenFit/o.lenWin)+' % of the span usable: slope less certain')}});
+  out.forEach((o,i)=>{if(o.sl==null||o.short)return;const nb=out.slice(Math.max(0,i-5),i+6).filter(q=>q!==o&&q.sl!=null).map(q=>q.sl).sort((p,q)=>p-q);
+    if(nb.length>=3){const md=nb[nb.length>>1];if(Math.abs(o.sl-md)>Math.max(0.05,0.25*Math.abs(md)))o.flags.push('slope differs from its neighbours ('+(-md).toFixed(3)+' dB/km): possible fault, or noise')}});
+  SF.res=out;SF.R=R;SF.key=key;return out;
+}
+function sfDraw(g,X,Y,m,ph){
+  const res=spanFits();g.save();g.strokeStyle=g.fillStyle=SFC;g.lineWidth=2;
+  for(const o of res){if(o.b<V.x0||o.a>V.x1)continue;
+    o.parts.forEach(q=>{const f=q.f;if(!f||f.sl==null)return;
+      g.setLineDash([]);g.beginPath();g.moveTo(X(f.u),Y(f.at(f.u)));g.lineTo(X(f.xf),Y(f.at(f.xf)));g.stroke();   // fitted: solid
+      const xe=q.p1;if(xe>f.xf){g.setLineDash([6,4]);g.beginPath();g.moveTo(X(f.xf),Y(f.at(f.xf)));g.lineTo(X(xe),Y(f.at(xe)));g.stroke()}});   // carried on to the next repeater or equaliser: dashed
+    if(o.flags.length){const px=X((o.a+o.b)/2);if(px>m.l&&px<m.l+V.pw){g.setLineDash([]);g.font='bold 12px system-ui,sans-serif';g.textAlign='center';g.fillText('!',px,m.t+24)}}
+    if(o.stepAt){const px=X(o.stepAt.at);g.setLineDash([2,3]);g.lineWidth=1;g.beginPath();g.moveTo(px,m.t+28);g.lineTo(px,m.t+ph);g.stroke();g.lineWidth=2}}
+  g.restore();
+}
+function sfLabel(i){const L=getRP().km.length;return D.rev?'R'+(L-i)+'–R'+(L-i-1):'R'+(i+1)+'–R'+(i+2)}
+function sfTip(px,py){
+  if(!SF.on||!D)return false;const x=V.x0+(px-V.m.l)/V.pw*(V.x1-V.x0),o=spanFits().find(q=>x>q.a&&x<q.b);if(!o)return false;
+  const tip=$('#rtip'),f2=v=>v==null?'–':v.toFixed(2);
+  tip.innerHTML='<b>Span '+sfLabel(o.s)+'</b> <span class="k">'+(o.b-o.a).toFixed(1)+' km</span><br>'+(o.sl!=null?'Slope '+(-o.sl).toFixed(3)+' dB/km · fibre loss '+f2(o.fibre)+' dB':'No fit')+
+    (o.eqs.length?'<br>Equaliser'+(o.eqs.length>1?'s':'')+': '+o.eqLoss.map((v,j)=>f2(v)+' dB at '+o.eqs[j].toFixed(1)+' km').join(', ')+'<br>Total '+f2(o.total)+' dB':'')+
+    '<br><span class="k">fitted over '+o.lenFit.toFixed(1)+' of '+o.lenWin.toFixed(1)+' km'+(o.parts[0].f&&o.parts[0].f.n?' · '+o.parts.reduce((t,q)=>t+(q.f&&q.f.n||0),0).toLocaleString()+' samples':'')+'</span>'+
+    (o.notes.length?'<br><span class="k">'+o.notes.join('<br>')+'</span>':'')+(o.flags.length?'<br><span style="color:'+SFC+'">'+o.flags.join('<br>')+'</span>':'');
+  tip.hidden=false;tip.style.left=Math.max(4,Math.min(px+14,$('#plot').clientWidth-tip.offsetWidth-4))+'px';tip.style.top=Math.max(4,py-tip.offsetHeight-10)+'px';return true;
+}
+function sfTable(){
+  const p=$('#sfp');p.hidden=!SF.on||!D;if(p.hidden)return;
+  const res=spanFits(),f=(v,d)=>v==null?'–':v.toFixed(d),ok=res.filter(o=>o.sl!=null),med=ok.map(o=>-o.sl).sort((a,b)=>a-b);
+  $('#sfrows').innerHTML=res.map(o=>'<tr data-s="'+o.s+'" style="cursor:pointer"><td>'+sfLabel(o.s)+'</td><td>'+f(o.a,1)+'</td><td>'+f(o.b,1)+'</td><td>'+f(o.b-o.a,1)+'</td><td>'+f(o.sl==null?null:-o.sl,3)+'</td><td><b>'+f(o.fibre,2)+'</b></td><td>'+(o.eqs.length?f(o.eqSum,2):'')+'</td><td>'+f(o.total,2)+'</td><td title="'+(o.notes.join('; ')||'fitted over the whole window')+'">'+(o.lenWin>0?Math.round(100*o.lenFit/o.lenWin)+' %':'–')+'</td><td class="l" style="'+(o.flags.length?'color:'+SFC:'')+'">'+o.flags.join('; ')+'</td></tr>').join('');
+  $('#sf-sum').textContent=res.length+' spans · '+ok.length+' fitted'+(med.length?' · median slope '+med[med.length>>1].toFixed(3)+' dB/km':'')+' · '+res.filter(o=>o.flags.length).length+' to check';
+}
+$('#sf').onclick=()=>{SF.on=!SF.on;$('#sf').className=SF.on?'primary':'';sfTable();draw()};
+$('#sfrows').addEventListener('click',e=>{const tr=e.target.closest('tr');if(!tr||!D)return;const o=spanFits()[+tr.dataset.s];if(!o)return;const w=o.b-o.a;V.x0=o.a-w*0.08;V.x1=o.b+w*0.08;V.y=null;clamp();draw()});
+
+/* ---------- IOR calibration to the RPL: rescale distances so the trace reads in RPL cable km ----------
+   distance = c·t / (2·IOR), so changing the IOR scales every distance by IOR(old) / IOR(new). */
+function setIor(R,n){   // give a trace a new (effective) IOR; the file's own value is kept in R.iorFile
+  const n0=R.fx.ior||1.47;if(!(n>1&&n<2)||Math.abs(n-n0)<1e-12)return 1;
+  if(R.iorFile==null)R.iorFile=n0;
+  const k=n0/n;R.dx*=k;R.fx.ior=n;
+  R.ev.forEach(e=>{e.d*=k;if(Number.isFinite(e.slope))e.slope/=k});if(R.sum&&R.sum.km)R.sum.km*=k;
+  R.rp=null;R.sm=null;R.nz=null;   // caches that depend on km
+  return k;
+}
+function iorRowsRead(){return[...$('#iorrows').children].map(tr=>({tr,n:parseInt(String(tr.querySelector('.ion').value).replace(/^\s*r/i,'')),p:parseFloat(tr.querySelector('.irp').value)}))}
+function iorAddRow(n,p){
+  const tr=document.createElement('tr');
+  tr.innerHTML='<td><input class="ion" type="text" inputmode="numeric" style="width:70px" placeholder="e.g. 12"></td><td><input class="irp" type="number" step="0.001" style="width:110px" placeholder="km"></td><td class="itk"></td><td class="l ifl k"></td><td class="ires"></td><td><button class="ior-x" title="Remove this row">✕</button></td>';
+  tr.querySelector('.ion').value=n==null?'':n;tr.querySelector('.irp').value=p==null?'':p;
+  tr.querySelectorAll('input').forEach(i=>i.addEventListener('input',iorCompute));
+  tr.querySelector('.ior-x').onclick=()=>{tr.remove();iorCompute()};
+  $('#iorrows').appendChild(tr);iorCompute();return tr;
+}
+let IORFIT=null;
+function iorCompute(){   // trace positions for each row, the fit, residuals and warnings
+  IORFIT=null;const out=$('#ior-res');if(!out)return;
+  if(!D){out.innerHTML='';$('#ior-apply').disabled=true;return}
+  const r=getRP(),L=r.km.length,rows=iorRowsRead(),use=[],seen=new Set(),warn=[];
+  rows.forEach(o=>{const c=k=>o.tr.querySelector(k);c('.itk').textContent='';c('.ifl').textContent='';c('.ires').textContent='';
+    if(!Number.isFinite(o.n))return;
+    if(o.n<1||o.n>L){c('.ifl').textContent='no repeater '+o.n+' on this trace (1–'+L+')';return}
+    if(seen.has(o.n)){c('.ifl').textContent='repeated row';return}seen.add(o.n);
+    const i=D.rev?L-o.n:o.n-1,t=r.km[i],f=r.fl&&r.fl[i];c('.itk').textContent=t.toFixed(3);
+    if(f)c('.ifl').textContent=f===3?'added by hand: position less certain':'inferred (~): position less certain';
+    if(Number.isFinite(o.p))use.push({o,t,p:o.p,f})});
+  const n0=D.fx.ior,res=$('#ior-res');
+  const head='<div><span class="k">IOR in use</span> <b>'+n0.toFixed(5)+'</b>'+(D.iorFile!=null&&Math.abs(D.iorFile-n0)>1e-9?' <span class="k">(file '+D.iorFile.toFixed(5)+')</span>':' <span class="k">(from the file)</span>')+'</div>';
+  if(use.length<2){res.innerHTML=head+'<div class="k" style="margin-top:4px">Enter at least two repeaters with their RPL cable km.</div>';$('#ior-apply').disabled=true;return}
+  const m=use.length,mt=use.reduce((a,u)=>a+u.t,0)/m,mp=use.reduce((a,u)=>a+u.p,0)/m;
+  let sxx=0,sxy=0;use.forEach(u=>{sxx+=(u.t-mt)**2;sxy+=(u.t-mt)*(u.p-mp)});
+  if(!(sxx>0)){res.innerHTML=head+'<div class="k" style="margin-top:4px">The reference repeaters must be at different positions.</div>';$('#ior-apply').disabled=true;return}
+  const sc=sxy/sxx,off=mp-sc*mt,nNew=n0/sc,spanP=Math.max(...use.map(u=>u.p))-Math.min(...use.map(u=>u.p)),spanT=Math.max(...use.map(u=>u.t))-Math.min(...use.map(u=>u.t));
+  let rms=0;use.forEach(u=>{const e=u.p-(sc*u.t+off);rms+=e*e;u.o.tr.querySelector('.ires').textContent=m===2?'– (exact with 2 rows)':(Math.abs(e)<0.0005?'0.000':(e>=0?'+':'')+e.toFixed(3))+' km'});rms=Math.sqrt(rms/m);
+  if(!(sc>0)||!(nNew>1&&nNew<2)){res.innerHTML=head+'<div style="color:var(--refl);margin-top:4px">These references give an impossible IOR ('+nNew.toFixed(4)+'). Check the repeater numbers (and numbering direction) and the RPL km.</div>';$('#ior-apply').disabled=true;return}
+  const pct=(nNew/n0-1)*100,sens=nNew*0.1/(spanP||1);
+  if(Math.abs(pct)>3)warn.push('a large change ('+pct.toFixed(2)+' %): check the repeater numbers, the numbering direction and that the RPL column is cable km');
+  if(spanP<500)warn.push('the references are only '+spanP.toFixed(0)+' km apart; repeaters further apart give a more accurate IOR');
+  if(use.some(u=>u.f))warn.push('some references are inferred or added by hand, so their positions are less certain');
+  if(m>2&&rms>0.5)warn.push('the references do not fit one IOR well (spread '+rms.toFixed(2)+' km); look for a large residual: a wrong number or RPL value, or a repair bight not yet in the RPL');
+  const f3=v=>v.toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3});
+  res.innerHTML=head+'<div class="mk" style="margin-top:6px">'+
+    '<div><span class="k">Effective IOR</span> <b>'+nNew.toFixed(5)+'</b></div>'+
+    '<div><span class="k">Change</span> <b>'+(pct>=0?'+':'')+pct.toFixed(3)+' %</b> <span class="k">(distances × '+sc.toFixed(6)+')</span></div>'+
+    '<div><span class="k">Reference span</span> <b>'+f3(spanP)+' km</b> <span class="k">RPL vs '+f3(spanT)+' km on the trace</span></div>'+
+    '<div><span class="k">Offset (information)</span> <b>'+(off>=0?'+':'')+off.toFixed(3)+' km</b> <span class="k">RPL minus calibrated trace: terminal or land-cable fibre, or the RPL zero point</span></div>'+
+    '<div><span class="k">Sensitivity</span> <b>±'+sens.toFixed(5)+'</b> <span class="k">IOR per 0.1 km of RPL error</span></div>'+
+    (m>2?'<div><span class="k">Fit spread (rms residual)</span> <b>'+rms.toFixed(3)+' km</b></div>':'')+
+    '</div>'+(warn.length?'<div style="color:var(--refl);margin-top:6px">Check: '+warn.join('; ')+'.</div>':'');
+  IORFIT={n:nNew,sc,off};$('#ior-apply').disabled=false;
+}
+function iorRescaleShared(k){   // distances that belong to the page, not to one trace
+  if(!(k>0)||k===1)return;
+  for(const a of [MAN.add,MAN.del,MAN.eq])for(let i=0;i<a.length;i++)a[i]*=k;
+  MAN.h.forEach(h=>{if(Number.isFinite(h[1]))h[1]*=k});
+  M.a*=k;M.b*=k;
+}
+function iorRefresh(k){   // redraw everything after the distances changed, keeping the view on the same stretch of cable
+  const x0=V.x0*k,x1=V.x1*k;MAN.v++;T.forEach(R=>{R.rp=null});SGraw=null;S3=null;SGx=null;
+  show(D,D.name);V.x0=x0;V.x1=x1;clamp();setMode(mode);mkUpdate();edNote();iorCompute();if(SF.on)sfTable();
+}
+function iorApply(){
+  if(!IORFIT||!D)return;const n=IORFIT.n,k=D.fx.ior/n,all=$('#ior-all').checked;
+  (all?T:[D]).forEach(R=>setIor(R,n));iorRescaleShared(k);iorRefresh(k);
+  sesNote('Effective IOR '+n.toFixed(5)+' applied to '+(all?(T.length===1?'the trace':'all '+T.length+' traces'):'this trace')+'. Distances now read in RPL cable km.');
+}
+function iorReset(){
+  if(!D)return;const k=D.iorFile!=null?D.fx.ior/D.iorFile:1;
+  T.forEach(R=>{if(R.iorFile!=null)setIor(R,R.iorFile)});iorRescaleShared(k);iorRefresh(k);sesNote('IOR reset to the values in the files.');
+}
+function iorBtns(){$('#ior-pick').className=ED.mode==='ior'?'primary':''}
+$('#ior').onclick=()=>{const p=$('#iorp');p.hidden=!p.hidden;$('#ior').className=p.hidden?'':'primary';
+  if(!p.hidden&&!$('#iorrows').children.length){iorAddRow('','');iorAddRow('','')}if(p.hidden&&ED.mode==='ior'){ED.mode=null;edNote()}iorBtns();iorCompute()};
+$('#ior-add').onclick=()=>iorAddRow('','');
+$('#ior-pick').onclick=()=>{ED.mode=ED.mode==='ior'?null:'ior';edNote();iorBtns()};
+$('#ior-clear').onclick=()=>{$('#iorrows').innerHTML='';iorAddRow('','');iorAddRow('','')};
+$('#ior-pastebtn').onclick=()=>{const b=$('#ior-pastebox');b.hidden=!b.hidden};
+$('#ior-fill').onclick=()=>{
+  const lines=$('#ior-paste').value.split(/\r?\n/),got=[];
+  lines.forEach(l=>{const m=/^\s*r?\s*(\d+)\s*[,;\t ]\s*([-+]?\d+(?:[.,]\d+)?)\s*$/i.exec(l);if(m)got.push([+m[1],parseFloat(m[2].replace(',','.'))])});
+  if(!got.length){sesNote('No rows found: use one repeater per line, e.g. "R12 523.4".',1);return}
+  [...$('#iorrows').children].forEach(tr=>{if(!tr.querySelector('.ion').value&&!tr.querySelector('.irp').value)tr.remove()});
+  got.forEach(([n,p])=>iorAddRow(n,p));$('#ior-pastebox').hidden=true;$('#ior-paste').value='';sesNote(got.length+' reference row'+(got.length===1?'':'s')+' added.');
+};
+$('#ior-apply').onclick=iorApply;$('#ior-reset').onclick=iorReset;
+
+/* ---------- session files (.cotdr.zip): the original trace files plus everything set or edited on the page ----------
+   A standard zip: session.json (format, version, settings, edits) and traces/NN_<original name> (byte-for-byte copies).
+   Bump SESSION.version when session.json changes, and keep reading older versions. */
+const SESSION={format:'cotdr-viewer-session',version:2};   // 2: IOR calibration (per-trace ior_file / ior_used, ior_cal rows)
+const SES_IDS=['stp','spc','gl','rl','lm','rn','inf','gx','sk','dt','md','nrm','sm','sw','slm','spw','sth'];   // detection, 3D and loop gain controls
+const localDate=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');   // local calendar date, for file names
+const isZip=u=>u.length>3&&u[0]===0x50&&u[1]===0x4b&&u[2]===3&&u[3]===4;
+function sesNote(t,bad){const e=$('#sesmsg');e.textContent=t;e.style.color=bad?'var(--refl)':''}
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u){let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRC[(c^u[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0}
+async function zstream(u,S,kind){return new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new S(kind))).arrayBuffer())}
+async function zipMake(files){   // [{name, data: Uint8Array}] → Blob; deflated where the browser can, otherwise stored
+  const enc=new TextEncoder(),parts=[],cd=[],d=new Date();let off=0;
+  const tm=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1),dt=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+  for(const f of files){
+    const nm=enc.encode(f.name),crc=crc32(f.data);let body=f.data,meth=0;
+    if(typeof CompressionStream!=='undefined'){try{const z=await zstream(f.data,CompressionStream,'deflate-raw');if(z.length<f.data.length){body=z;meth=8}}catch(e){}}
+    const h=new DataView(new ArrayBuffer(30)),c=new DataView(new ArrayBuffer(46));
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(8,meth,true);h.setUint16(10,tm,true);h.setUint16(12,dt,true);
+    h.setUint32(14,crc,true);h.setUint32(18,body.length,true);h.setUint32(22,f.data.length,true);h.setUint16(26,nm.length,true);
+    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(10,meth,true);c.setUint16(12,tm,true);c.setUint16(14,dt,true);
+    c.setUint32(16,crc,true);c.setUint32(20,body.length,true);c.setUint32(24,f.data.length,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+    parts.push(h.buffer,nm,body);cd.push(c.buffer,nm);off+=30+nm.length+body.length;
+  }
+  const cdLen=cd.reduce((a,p)=>a+p.byteLength,0),e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cdLen,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cd,e.buffer]);
+}
+async function zipRead(buf){   // → Map(name → Uint8Array); stored and deflated entries, also zips re-made by other tools
+  const dv=new DataView(buf),u=new Uint8Array(buf),dec=new TextDecoder();let e=-1;
+  for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-65557);i--)if(dv.getUint32(i,true)===0x06054b50){e=i;break}
+  if(e<0)throw new Error('it is not a session file (no zip directory found)');
+  const n=dv.getUint16(e+10,true),out=new Map();let p=dv.getUint32(e+16,true);
+  for(let k=0;k<n;k++){
+    if(dv.getUint32(p,true)!==0x02014b50)throw new Error('the session file is damaged');
+    const meth=dv.getUint16(p+10,true),crc=dv.getUint32(p+16,true),cs=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
+    const name=dec.decode(u.subarray(p+46,p+46+nl));p+=46+nl+xl+cl;
+    if(name.endsWith('/'))continue;
+    const ds=lo+30+dv.getUint16(lo+26,true)+dv.getUint16(lo+28,true),raw=u.subarray(ds,ds+cs);let data;
+    if(meth===0)data=raw.slice();
+    else if(meth===8){if(typeof DecompressionStream==='undefined')throw new Error('this browser cannot unpack compressed files; please use a current browser');data=await zstream(raw,DecompressionStream,'deflate-raw')}
+    else throw new Error('unsupported compression in '+name);
+    if(crc32(data)!==crc)throw new Error(name+' is damaged (checksum mismatch)');
+    out.set(name,data);
+  }
+  return out;
+}
+function sessionState(){   // everything session.json records
+  const val=id=>{const el=$('#'+id);return el.type==='checkbox'?el.checked:el.value},settings={};
+  SES_IDS.forEach(id=>{if($('#'+id))settings[id]=val(id)});
+  const nameOf=sel=>{const R=T[+$(sel).value];return R?R.name:null};
+  return{format:SESSION.format,version:SESSION.version,saved:new Date().toISOString(),app:{name:APP.name,build:BUILD.n},
+    traces:T.map(R=>({file:R.sesFile,name:R.name,reverse:!!R.rev,ior_file:R.iorFile!=null?R.iorFile:R.fx.ior,ior_used:R.fx.ior,wavelength_nm:R.fx.wl||null,measured:R.fx.dt?new Date(R.fx.dt*1000).toISOString():null})),
+    edits:{added_km:MAN.add.slice(),removed_km:MAN.del.slice(),equalisers_km:MAN.eq.slice()},
+    markers:{on:M.on,a_km:M.a,b_km:M.b},levels:{on:LV.on,u_db:LV.u,l_db:LV.l},repeater_ticks:RP.on,
+    span_fits:SF.on,baseline_3d:nameOf('#bs'),baseline_loop_gain:nameOf('#sbs'),settings,
+    ior_cal:{rows:iorRowsRead().map(r=>({repeater:r.n,rpl_km:r.p}))},
+    view:{tab:mode,trace:D?D.name:null,x0_km:V.x0,x1_km:V.x1}};
+}
+async function saveSession(){
+  if(!T.length)return;$('#err').textContent='';
+  if(T.some(R=>!R.raw)){sesNote('Cannot save: a trace was loaded without its original file.',1);return}
+  const safe=t=>t.replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_');
+  T.forEach((R,i)=>R.sesFile='traces/'+String(i+1).padStart(2,'0')+'_'+safe(R.name));
+  const files=[{name:'session.json',data:new TextEncoder().encode(JSON.stringify(sessionState(),null,1))},...T.map(R=>({name:R.sesFile,data:new Uint8Array(R.raw)}))];
+  sesNote('Preparing session…');
+  const blob=await zipMake(files),mb=(blob.size/1048576).toFixed(1)+' MB';
+  const fn=safe(T[0].name.replace(/\.[^.]+$/,'')||'trace')+(T.length>1?'_+'+(T.length-1):'')+'_session_'+localDate(new Date())+'.cotdr.zip';
+  const dl=window.claude&&typeof claude.use==='function'?await claude.use('downloads').catch(()=>null):null;
+  if(dl){
+    try{await dl.save({filename:fn,data:blob});sesNote('Session saved ('+mb+').')}
+    catch(e){const c=e&&e.code;sesNote(c==='declined'?'Save cancelled.':c==='rate_limited'?'A save is already waiting for your answer.':'Could not save the session'+(c?' ('+c+')':'')+'.',c!=='declined')}
+    return}
+  if(window.claude&&typeof claude.use==='function'){sesNote('Saving is not switched on for this page yet (it needs the downloads permission). Opening sessions works. Meanwhile, save from a downloaded copy of the viewer opened in your browser.',1);return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();   // outside Claude: an ordinary browser download
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},5000);sesNote('Session file created ('+mb+').');
+}
+async function openSession(buf,fname){
+  const files=await zipRead(buf),j=files.get('session.json');
+  if(!j)throw new Error('there is no session.json inside, so this zip is not a viewer session');
+  let S;try{S=JSON.parse(new TextDecoder().decode(j))}catch(e){throw new Error('session.json is not readable')}
+  if(S.format!==SESSION.format)throw new Error('it is not a viewer session file');
+  if(!(S.version<=SESSION.version))throw new Error('it was saved by a newer version of the viewer (session format '+S.version+'); please use the latest viewer');
+  const out=[];
+  for(const t of S.traces||[]){
+    const d=files.get(t.file);if(!d)throw new Error(t.file+' is missing from the session');
+    const raw=d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength),R=parseAny(raw);R.raw=raw;R.name=t.name;R.rev=!!t.reverse;
+    if(Number.isFinite(t.ior_used)&&t.ior_used>1&&t.ior_used<2&&Math.abs(t.ior_used-R.fx.ior)>1e-9)setIor(R,t.ior_used);   // calibrated IOR (session v2)
+    out.push(R)}
+  if(!out.length)throw new Error('the session holds no traces');
+  // everything parsed: now replace what is on the page
+  const ed=S.edits||{},num=a=>(Array.isArray(a)?a:[]).filter(Number.isFinite);
+  MAN.add.length=MAN.del.length=MAN.eq.length=MAN.h.length=0;MAN.add.push(...num(ed.added_km));MAN.del.push(...num(ed.removed_km));MAN.eq.push(...num(ed.equalisers_km));
+  ED.mode=null;MAN.v++;SGraw=null;SGx=null;SGy=[null,null];S3=null;
+  installTraces(out,out);
+  const st=S.settings||{};
+  SES_IDS.forEach(id=>{const el=$('#'+id);if(!el||!(id in st))return;if(el.type==='checkbox')el.checked=!!st[id];else el.value=st[id]});
+  const byName=n=>T.findIndex(R=>R.name===n);
+  {const i=byName(S.baseline_3d);if(i>=0)$('#bs').value=i}{const i=byName(S.baseline_loop_gain);if(i>=0)$('#sbs').value=i}
+  const mk=S.markers||{},lv=S.levels||{};
+  M.on=!!mk.on;if(Number.isFinite(mk.a_km))M.a=mk.a_km;if(Number.isFinite(mk.b_km))M.b=mk.b_km;
+  LV.on=!!lv.on;if(Number.isFinite(lv.u_db))LV.u=lv.u_db;if(Number.isFinite(lv.l_db))LV.l=lv.l_db;
+  RP.on=S.repeater_ticks!==false;RP.h=-1;SF.on=!!S.span_fits;SF.res=null;$('#sf').className=SF.on?'primary':'';$('#sfp').hidden=!SF.on;
+  $('#mk').className=$('#smk').className=M.on?'primary':'';$('#lv').className=LV.on?'primary':'';$('#rp').className=RP.on?'primary':'';
+  T.forEach(R=>{R.rp=null});edNote();
+  const vw=S.view||{},ti=byName(vw.trace);
+  if(ti>=0){$('#sel').value=ti;show(T[ti],T[ti].name)}
+  if(Number.isFinite(vw.x0_km)&&Number.isFinite(vw.x1_km)&&vw.x1_km>vw.x0_km){V.x0=vw.x0_km;V.x1=vw.x1_km}
+  mode=['2d','3d','sig'].includes(vw.tab)?vw.tab:'2d';if(T.length<2&&mode==='3d')mode='2d';
+  if(SF.on)sfTable();
+  $('#iorrows').innerHTML='';((S.ior_cal&&S.ior_cal.rows)||[]).forEach(r=>iorAddRow(r.repeater,r.rpl_km));iorCompute();
+  setMode(mode);if(typeof mkUpdate==='function')mkUpdate();if(typeof lvUpdate==='function')lvUpdate();
+  sesNote('Session opened: '+fname+' · '+T.length+' trace'+(T.length===1?'':'s')+(S.saved&&!isNaN(new Date(S.saved))?' · saved '+localDate(new Date(S.saved)):''));
+}
+$('#sv').onclick=()=>{saveSession().catch(e=>sesNote('Could not save the session: '+e.message,1))};
 
 /* ---------- file loading ---------- */
 async function loadFile(f){
