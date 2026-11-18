@@ -83,11 +83,35 @@ h2{font-size:15px;margin:0 0 10px}
 .lic-body th{background:var(--bg)}
 .lic-bar{padding:10px 18px 14px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
 button:disabled{opacity:.45;cursor:not-allowed}
+.hbtn{font-weight:600}
+#hlp{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:90;display:none;align-items:center;justify-content:center;padding:16px}
+#hlp.on{display:flex}
+.hlp-card{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;max-width:980px;width:100%;height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.hlp-top{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.hlp-top h2{margin:0;font-size:17px;flex:1}
+.hlp-top input{width:200px;max-width:40%}
+.hlp-main{display:flex;flex:1;min-height:0}
+#hlp-toc{width:210px;flex:none;overflow:auto;padding:10px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+#hlp-toc button{text-align:left;border:none;background:none;padding:5px 8px;border-radius:6px;font-size:13px}
+#hlp-toc button:hover,#hlp-toc button.cur{background:var(--bg);color:var(--accent)}
+#hlp-body{flex:1;overflow:auto;padding:4px 20px 20px;font-size:13.5px;line-height:1.55}
+#hlp-body section{padding-top:6px}
+#hlp-body h3{font-size:16px;margin:18px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+#hlp-body h4{font-size:13.5px;margin:12px 0 4px}
+#hlp-body p{margin:6px 0}#hlp-body ul{margin:4px 0 8px;padding-left:20px}#hlp-body li{margin:2px 0}
+#hlp-body kbd{font:12px ui-monospace,monospace;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+#hlp-body table{border-collapse:collapse;width:100%;margin:6px 0}
+#hlp-body td,#hlp-body th{border:1px solid var(--line);padding:4px 8px;text-align:left;white-space:normal;vertical-align:top}
+#hlp-body th{background:var(--bg)}
+#hlp-body .tip{background:var(--bg);border-left:3px solid var(--accent);padding:6px 10px;border-radius:4px;margin:8px 0}
+#hlp-body .warn{background:var(--bg);border-left:3px solid var(--refl);padding:6px 10px;border-radius:4px;margin:8px 0}
+#hlp-none{padding:20px;color:var(--muted)}
+@media(max-width:640px){#hlp-toc{display:none}.hlp-top input{display:none}}
 </style>
 </head>
 <body>
 <main>
-<h1>SOR - ALL / C-OTDR Trace Viewer</h1>
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><h1 style="flex:1;min-width:200px">SOR - ALL / C-OTDR Trace Viewer</h1><button id="hlpBtn" class="primary hbtn" type="button" title="Help for the whole application (press F1 or ?)">? Help</button></div>
 <p class="sub">Telcordia SR-4731 (SOR v1 &amp; v2) and Advantest/Anritsu Q8492 .ALL files, and saved sessions (.cotdr.zip). Files are read locally in your browser and never uploaded. <span id="bld" style="white-space:nowrap;margin-left:6px"></span> <button class="lnk" id="hdrAbout" type="button">Licence · Disclaimer · About</button></p>
 
 <div class="card">
@@ -178,7 +202,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <div id="ft"><span>&copy; 2026 Paul Lomas. All rights reserved.</span>
 <button class="lnk" id="ftLic" type="button">Licence</button>
 <button class="lnk" id="ftDis" type="button">Disclaimer</button>
-<button class="lnk" id="ftAbout" type="button">About</button></div>
+<button class="lnk" id="ftAbout" type="button">About</button><button class="lnk" id="ftHelp" type="button">Help</button></div>
 </main>
 <div id="lic" role="dialog" aria-modal="true" aria-labelledby="lic-title"><div class="lic-card">
 <h2 id="lic-title">Copyright, Licence &amp; Disclaimer</h2>
@@ -225,9 +249,121 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <div class="lic-bar" id="lic-viewbar" style="display:none"><span style="color:var(--muted)">You accepted these terms on this device.</span><button id="lic-close" type="button">Close</button></div>
 </div></div>
 
+<div id="hlp" role="dialog" aria-modal="true" aria-labelledby="hlp-title"><div class="hlp-card">
+<div class="hlp-top"><h2 id="hlp-title">Help</h2><input id="hlp-q" type="search" placeholder="Search help…" aria-label="Search help"><button id="hlp-x" type="button">Close</button></div>
+<div class="hlp-main"><nav id="hlp-toc" aria-label="Help topics"></nav><div id="hlp-body">
+<section id="h-start" data-t="Getting started" data-for="">
+<h3>Getting started</h3>
+<p>This page shows OTDR and coherent OTDR (C-OTDR) traces: Telcordia SR-4731 <b>.SOR</b> files (version 1 and 2) and Advantest/Anritsu Q8492 <b>.ALL</b> files, up to several thousand km long with repeater (sawtooth) patterns.</p>
+<ul><li><b>Open trace file</b>, or drag and drop files anywhere on the page. You can load up to 8 traces; <b>+ Add</b> adds to the ones already loaded. Files appear in alphabetical order.</li>
+<li>A saved session (<b>.cotdr.zip</b>) opens the same way and restores everything. See Sessions.</li>
+<li>Everything runs in your browser. Trace files are <b>never uploaded</b>.</li>
+<li>Pick the trace on screen from the drop-down list; <b>Remove trace</b> takes it off the page (the file itself is not touched).</li>
+<li>Three views, chosen with the buttons at the top: <b>Trace</b> (one trace), <b>3D trace compare</b> and <b>Loop gain signature</b> (compare several traces).</li></ul>
+<div class="tip">Compare only traces taken from the <b>same end</b> of the cable. Repeater numbering follows the baseline trace.</div>
+</section>
+<section id="h-trace" data-t="Trace view" data-for="2d">
+<h3>Trace view</h3>
+<ul><li><b>Zoom and pan:</b> scroll wheel to zoom, drag to pan, double-click to fit. The buttons <b>＋ −</b> zoom, <b>Signal</b> zooms to the part of the trace that has signal (the end is found automatically), <b>Full</b> shows the whole trace.</li>
+<li><b>Zoom bars:</b> the bar under the plot (distance) and the bar to the right (level) show where you are. Drag the box to pan, drag its ends to zoom, click to jump, double-click the vertical bar to reset the level range.</li>
+<li><b>Hover</b> to read distance and relative level.</li>
+<li>Distance is time × c / IOR, in km, one way. The level is relative (not calibrated to launch power).</li>
+<li>Below the plot: the <b>Events</b> table (SOR files; click a row to zoom to it), <b>Measurement</b> (date, wavelength, pulse width, IOR, averages, where the signal ends, checksum) and <b>Instrument &amp; link</b> (cable, fibre, locations, operator, instrument details).</li></ul>
+<h4>Markers A/B</h4>
+<p>Press <b>Markers A/B</b>. Drag the orange A and purple B lines, or click the plot to move the nearest one. The readout gives distance A–B, level change, loss rate, least-squares attenuation and event loss. For a splice or event put A just before it and B just after; the <b>fit window</b> sets how many km either side are used for the fits. The same markers appear on the 3D and loop gain views and can limit them to the stretch between A and B.</p>
+<h4>Levels U/L</h4>
+<p>Press <b>Levels U/L</b>, then drag the green U and pink L lines up or down to read a level difference, for example the height of a repeater step.</p>
+</section>
+<section id="h-rep" data-t="Repeaters" data-for="2d">
+<h3>Repeaters</h3>
+<p><b>Repeaters</b> marks each repeater found on the trace with a triangle along the top. Hover a triangle to see its number and details. Detection looks for the rise in backscatter at each repeater, checks it is a real peak, and removes steps that do not fit the regular span pattern.</p>
+<ul><li><b>Hollow triangle</b> = inferred: the noise hides the repeater but the gap is a whole number of normal spans. Turn this off with <b>Infer hidden repeaters</b> (3D tab).</li>
+<li><b>Orange triangle</b> = added by hand.</li>
+<li><b>Reverse numbering</b> numbers the repeaters from the other end, for a trace taken from the B end. It applies to the trace on screen.</li>
+<li>Detection settings (<b>Min step</b>, <b>Min spacing</b>, <b>Skip after repeater</b>, <b>Infer hidden repeaters</b>) are on the 3D trace compare tab and apply everywhere.</li></ul>
+<h4>Edit repeaters (manual changes)</h4>
+<p>Press <b>Edit repeaters</b>, pick a mode, then click the plot:</p>
+<ul><li><b>Add repeater</b> snaps to the nearest rise. <b>Remove repeater</b> removes the one nearest the click.</li>
+<li><b>Add equaliser</b> / <b>Remove equaliser</b> mark gain equalisers (purple diamonds). They also show on the loop gain plots and split span fits in two.</li>
+<li><b>Undo</b> reverses the last edit; <b>Clear all edits</b> removes them all.</li></ul>
+<p>Edits apply to <b>every loaded trace</b> and change the numbering everywhere. They are lost when the page closes unless you use <b>Save session</b>.</p>
+</section>
+<section id="h-sf" data-t="Span fits" data-for="2d">
+<h3>Span fits</h3>
+<p><b>Span fits</b> draws a red straight-line fit of the backscatter in each span between repeaters: an estimate of span loss that still works where the signal is down in the noise. Solid = fitted; dashed = carried on to the next repeater.</p>
+<ul><li>The fit starts after the repeater's HLLB block (at least 1.3 × pulse length, or the <b>Skip after repeater</b> setting) and stops before the next repeater, or where the signal sinks into the noise or rolls off.</li>
+<li>With an equaliser marked, the span is fitted in two parts and the gap between the lines is the equaliser's insertion loss.</li>
+<li><b>!</b> above a span means check it: in the noise, a possible unmarked equaliser or event (dotted line), or a slope that differs from its neighbours. Grey notes are for information only.</li>
+<li>Hover a span for slope, fibre loss, equaliser loss and total; the table underneath lists every span (click a row to zoom to it).</li></ul>
+</section>
+<section id="h-ior" data-t="IOR calibration" data-for="2d">
+<h3>IOR calibration</h3>
+<p>If the index of refraction (IOR) in the file is wrong, distances will not match the RPL (route position list). <b>IOR calibration</b> corrects this.</p>
+<ul><li>Enter at least two repeaters (well apart) with their <b>RPL cable km</b> (cumulative cable length, not route distance). Add rows by hand, with <b>Pick repeater on trace</b>, or paste lines such as <kbd>R12 523.4</kbd>.</li>
+<li>With two rows the fit is exact; with three or more it is least-squares and shows the residual of each row. The page warns about large changes, references close together, inferred repeaters and poor fits.</li>
+<li><b>Apply</b> to all loaded traces or this trace only. All distances rescale (trace, repeaters, events, markers, equalisers, edits). <b>Reset to file IOR</b> undoes it exactly.</li>
+<li>The effective IOR makes the trace read in cable km and absorbs fibre over-length, so it is not the fibre's true IOR. The offset is shown for information only.</li></ul>
+</section>
+<section id="h-3d" data-t="3D trace compare" data-for="3d">
+<h3>3D trace compare</h3>
+<p>Overlays up to 8 traces (for example different wavelengths) as a surface along the cable, so changes between traces stand out.</p>
+<ul><li><b>Drag</b> to rotate, <b>scroll</b> to zoom, <b>Reset view</b> to start again. The bar at the right zooms the vertical axis.</li>
+<li><b>Data:</b> <i>Entire trace</i> or <i>Repeater peaks only</i>. <b>Show:</b> <i>Peak level</i> or <i>Difference vs baseline</i>; pick the <b>Baseline</b> trace.</li>
+<li><b>Colours</b> (difference mode): green within the first limit (default 1 dB) through to red at or above the second (default 10 dB).</li>
+<li><b>Remove each trace's mean</b> lines the traces up so only the shape differences remain.</li>
+<li><b>Only between markers A–B</b> limits the plot to the stretch you marked; <b>Repeater numbers</b> labels the repeaters.</li>
+<li><b>Gain from span-loss extrapolation</b> estimates repeater gain by extending the fitted span-loss line either side of the repeater and taking the difference, ignoring the reflective filter overshoot and plateau.</li>
+<li>The table underneath lists the values per repeater.</li></ul>
+</section>
+<section id="h-sig" data-t="Loop gain signature" data-for="sig">
+<h3>Loop gain signature</h3>
+<p>Plots, repeater by repeater, how each trace behaves compared with a baseline, so a change in one span or repeater shows up along the whole system.</p>
+<ul><li><b>Measure:</b> <i>Rayleigh level after the repeater</i> (loop gain) or <i>HLLB reflection peak</i> (filter plateau).</li>
+<li><b>Show:</b> <i>Absolute</i> or <i>Deviation from baseline</i>; choose the <b>Baseline</b>.</li>
+<li><b>Normalise for pulse width</b>: Rayleigh level scales with pulse width, so tick this when traces use different pulses. The filter plateau does not depend on pulse width.</li>
+<li><b>Flag span loss deviation relative to baseline over [x] dB</b> highlights repeaters whose span loss differs from the baseline by more than that.</li>
+<li><b>Only between markers A–B</b> removes noisy stretches. Equalisers appear as purple dashed lines.</li>
+<li>Zoom with the bars (right edge for level, bottom for distance); hover for details; the table lists each repeater.</li></ul>
+<div class="tip">The first repeater has an output side only, so it is plotted from its output value.</div>
+</section>
+<section id="h-ses" data-t="Sessions (save and open)" data-for="">
+<h3>Sessions (save and open)</h3>
+<p><b>Save session</b> writes one file, <code>&lt;first trace&gt;_session_&lt;date&gt;.cotdr.zip</code>, containing every loaded trace (unchanged copies of the originals) plus your work: manual repeater and equaliser edits, reverse numbering, markers A/B, levels U/L, baselines, detection and plot settings, IOR calibration, span fits on/off, selected trace, tab and zoom.</p>
+<ul><li>Open it with <b>Open trace file</b> or by dropping it on the page. It replaces what is on screen.</li>
+<li>Any zip tool can open it and extract the original trace files. The <code>.zip</code> ending is needed so browsers accept the download.</li>
+<li>Older sessions still open.</li>
+<li>Inside claude.ai the page may not be allowed to save files; if Save shows a message, download a copy of the viewer and open it in your browser, where saving works normally.</li></ul>
+</section>
+<section id="h-gl" data-t="Terms and tips" data-for="">
+<h3>Terms and tips</h3>
+<table><tr><th>Term</th><th>Meaning</th></tr>
+<tr><td>C-OTDR</td><td>Coherent OTDR: sees the backscatter through repeaters, so a long trace shows a sawtooth of rises at each repeater.</td></tr>
+<tr><td>HLLB</td><td>High loss loopback path at each repeater; the viewer reads its reflection (the "filter plateau") separately from the Rayleigh level.</td></tr>
+<tr><td>Loop gain</td><td>Rayleigh backscatter level just after a repeater, a measure of the return path gain through it.</td></tr>
+<tr><td>Span loss deviation</td><td>Difference in a span's loss from the baseline trace.</td></tr>
+<tr><td>Baseline</td><td>The reference trace that the others are compared with.</td></tr>
+<tr><td>Inferred repeater</td><td>One the noise hides, added because the gap is a whole number of spans.</td></tr>
+<tr><td>RPL</td><td>Route position list from the cable supplier.</td></tr></table>
+<h4>If something looks wrong</h4>
+<ul><li><b>Repeater missing or extra:</b> adjust <b>Min step</b> and <b>Min spacing</b>, or use <b>Edit repeaters</b>.</li>
+<li><b>Numbers run the wrong way:</b> use <b>Reverse numbering</b> for a B-end trace.</li>
+<li><b>Distances do not match the RPL:</b> use <b>IOR calibration</b>.</li>
+<li><b>Flat trace or no signal at the far end:</b> the signal has dropped into the noise; the page stops fits where that happens. Use <b>Signal</b> to zoom to the useful part.</li>
+<li><b>Nothing happens when opening a file:</b> accept the licence first (see below) and check the file is a .sor, .all or .cotdr.zip.</li></ul>
+<h4>Keyboard</h4>
+<p><kbd>F1</kbd> or <kbd>?</kbd> opens this help (at the topic for the view you are in); <kbd>Esc</kbd> closes it.</p>
+</section>
+<section id="h-lic" data-t="Licence, disclaimer and privacy" data-for="">
+<h3>Licence, disclaimer and privacy</h3>
+<p>The copyright notice, software licence and the No Warranty / Limitation of Liability disclaimer must be accepted before files can be loaded; they are always available from <b>Licence · Disclaimer · About</b> at the top and the links at the bottom. The results are an <b>engineering aid</b>: verify them independently before using them for operational, maintenance, fault-location, repair or planning decisions. Trace data stays in your browser.</p>
+<p>&copy; 2026 Paul Lomas. All rights reserved.</p>
+</section>
+<div id="hlp-none" hidden>No help topics match your search.</div>
+</div></div></div></div>
+
 <script>
 const $=s=>document.querySelector(s);
-const BUILD={n:'017',date:'2026-11-16'};   // increment n on every change (Build 013: licence, disclaimer, attribution)
+const BUILD={n:'018',date:'2026-11-18'};   // increment n on every change (Build 018: Help button and help panel)
 const APP={name:'SOR - ALL / C-OTDR Trace Viewer',developer:'Paul Lomas',year:2026,assist:'Developed with the assistance of Claude, an AI model by Anthropic.',licVer:'1'};
 console.info(APP.name+' · Build '+BUILD.n+' · © '+APP.year+' '+APP.developer+'. All rights reserved.');
 $('#bld').textContent='Build '+BUILD.n+' · '+BUILD.date+' · © '+APP.year+' '+APP.developer;
@@ -1308,6 +1444,26 @@ $('#file2').onchange=e=>{loadFiles(e.target.files,true);e.target.value=''};
 addEventListener('dragover',e=>{e.preventDefault();document.body.classList.add('drag')});
 addEventListener('dragleave',()=>document.body.classList.remove('drag'));
 addEventListener('drop',e=>{e.preventDefault();document.body.classList.remove('drag');loadFiles(e.dataTransfer.files,e.shiftKey)});
+
+/* ---------- help ---------- */
+const HLP={secs:[...document.querySelectorAll('#hlp-body section')]};
+function hlpGo(id){const e=document.getElementById(id);if(e)$('#hlp-body').scrollTop=e.offsetTop-$('#hlp-body').offsetTop-4;document.querySelectorAll('#hlp-toc button').forEach(b=>b.classList.toggle('cur',b.dataset.id===id))}
+function hlpFilter(q){q=q.trim().toLowerCase();let n=0;HLP.secs.forEach(s=>{const on=!q||s.textContent.toLowerCase().includes(q)||s.dataset.t.toLowerCase().includes(q);s.hidden=!on;if(on)n++});
+  document.querySelectorAll('#hlp-toc button').forEach(b=>{b.hidden=document.getElementById(b.dataset.id).hidden});$('#hlp-none').hidden=n>0}
+function hlpShow(id){
+  if(typeof LIC!=='undefined'&&$('#lic').classList.contains('on'))return;
+  if(!id){const m=typeof mode!=='undefined'?mode:'';const f=HLP.secs.find(s=>s.dataset.for===m);id=f?f.id:'h-start'}
+  $('#hlp-q').value='';hlpFilter('');$('#hlp').classList.add('on');hlpGo(id);$('#hlp-q').focus()}
+function hlpHide(){$('#hlp').classList.remove('on')}
+$('#hlp-toc').innerHTML=HLP.secs.map(s=>'<button type="button" data-id="'+s.id+'">'+s.dataset.t+'</button>').join('');
+$('#hlp-toc').addEventListener('click',e=>{const b=e.target.closest('button');if(b)hlpGo(b.dataset.id)});
+$('#hlp-q').addEventListener('input',e=>hlpFilter(e.target.value));
+$('#hlp-x').addEventListener('click',hlpHide);$('#hlpBtn').addEventListener('click',()=>hlpShow());$('#ftHelp').addEventListener('click',()=>hlpShow());
+$('#hlp').addEventListener('click',e=>{if(e.target===$('#hlp'))hlpHide()});
+addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&$('#hlp').classList.contains('on')){hlpHide();return}
+  const t=e.target,typing=t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT');
+  if(e.key==='F1'||(e.key==='?'&&!typing)){e.preventDefault();hlpShow()}});
 </script>
 </body>
 </html>
